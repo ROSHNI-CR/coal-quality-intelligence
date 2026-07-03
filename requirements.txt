@@ -1,0 +1,23 @@
+# Core dependencies actually imported by the backend code (db/, services/)
+requests>=2.31
+pandas>=2.0
+numpy>=1.26
+scipy>=1.11
+scikit-learn>=1.3
+
+# Needed to run the FastAPI layer (api/environmental_routes.py)
+# NOTE: these endpoints are implementation-complete but were never
+# runtime-verified in the development sandbox (no network egress to
+# install them there) -- see PROJECT_STATUS.md Section 7.
+fastapi>=0.110
+uvicorn[standard]>=0.27
+
+# OPTIONAL but RECOMMENDED for Module 4 (Influence Quantification Engine).
+# The code auto-detects these and uses them when present; if absent it
+# falls back to clearly-labeled scikit-learn-native substitutes
+# (GradientBoostingRegressor / HistGradientBoostingRegressor /
+# permutation_importance respectively). See MODULE4_IMPLEMENTATION_REPORT.md
+# for why this matters and what was actually used in development.
+xgboost>=2.0
+lightgbm>=4.0
+shap>=0.44
