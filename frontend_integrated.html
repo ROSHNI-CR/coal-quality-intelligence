@@ -549,7 +549,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
         </div>
         
         <!-- MULTILINGUAL SELECTOR CHIP -->
-        <div class="tb-chip" id="langSelectorChip" style="cursor:pointer;position:relative;height:30px;padding:0 12px;border-radius:var(--radius-md);font-size:11px;align-items:center;display:inline-flex" onclick="toggleLangDropdown(event)" title="Switch Language">
+        <div class="tb-chip" id="langSelectorChip" style="cursor:pointer;position:relative;height:30px;padding:0 12px;border-radius:var(--radius-md);font-size:11px;align-items:center;display:inline-flex;overflow:visible !important;" onclick="toggleLangDropdown(event)" title="Switch Language">
           🌐 <span id="currentLangLabel" style="margin-left:4px">English</span> <span style="font-size:8px;margin-left:4px">▼</span>
           <div id="langDropdown" class="search-dropdown" style="top:calc(100% + 4px);right:0;width:110px;display:none;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,0.5)">
             <div style="padding:6px 12px;cursor:pointer;border-bottom:1px solid rgba(0, 0, 0, 0.04)" onclick="switchLanguage('en')">🇬🇧 English</div>
