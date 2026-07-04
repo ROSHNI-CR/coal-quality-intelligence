@@ -554,7 +554,9 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
           <div id="langDropdown" class="search-dropdown" style="top:calc(100% + 4px);right:0;width:110px;display:none;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,0.5)">
             <div style="padding:6px 12px;cursor:pointer;border-bottom:1px solid rgba(0, 0, 0, 0.04)" onclick="switchLanguage('en')">🇬🇧 English</div>
             <div style="padding:6px 12px;cursor:pointer;border-bottom:1px solid rgba(0, 0, 0, 0.04)" onclick="switchLanguage('hi')">🇮🇳 हिन्दी</div>
-            <div style="padding:6px 12px;cursor:pointer" onclick="switchLanguage('bn')">🇧🇩 বাংলা</div>
+            <div style="padding:6px 12px;cursor:pointer;border-bottom:1px solid rgba(0, 0, 0, 0.04)" onclick="switchLanguage('bn')">🇧🇩 বাংলা</div>
+            <div style="padding:6px 12px;cursor:pointer;border-bottom:1px solid rgba(0, 0, 0, 0.04)" onclick="switchLanguage('or')">🇮🇳 ଓଡ଼ିଆ</div>
+            <div style="padding:6px 12px;cursor:pointer" onclick="switchLanguage('mr')">🇮🇳 मराठी</div>
           </div>
         </div>
 
@@ -1376,21 +1378,27 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
             </div>
 
             <!-- Selector Row -->
-            <div style="display:flex;gap:12px;align-items:center">
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
               <div>
                 <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Select Mine Station</label>
-                <select id="wxExplorerMine" onchange="loadWxExplorerTimeseries()" style="display:block;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 12px;border-radius:var(--radius-md);font-size:12px;width:240px;outline:none;margin-top:4px">
+                <select id="wxExplorerMine" onchange="loadWxExplorerTimeseries()" style="display:block;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 12px;border-radius:0px;font-size:12px;width:240px;outline:none;margin-top:4px">
                   <!-- Filled dynamically -->
                 </select>
               </div>
 
               <div>
                 <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Analysis Profile</label>
-                <select id="wxChartProfile" onchange="plotWxExplorerChart()" style="display:block;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 12px;border-radius:var(--radius-md);font-size:12px;width:180px;outline:none;margin-top:4px">
+                <select id="wxChartProfile" onchange="plotWxExplorerChart()" style="display:block;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 12px;border-radius:0px;font-size:12px;width:180px;outline:none;margin-top:4px">
                   <option value="moisture">Moisture Profile (Humidity, Rain, Drying)</option>
                   <option value="thermal">Thermal Profile (Temp, Dew Pt, Solar)</option>
                   <option value="atmos">Atmospheric Profile (Pressure, Wind Speed/Gust)</option>
                 </select>
+              </div>
+
+              <div style="display:flex;align-items:flex-end;height:45px">
+                <button id="liveWxBtn" onclick="toggleLiveWeather()" style="background:var(--color-blue-bg);color:var(--color-blue);border:1px solid rgba(59,130,246,0.25);padding:6px 14px;border-radius:0px;font-size:11.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+                  <span class="chip-dot" id="liveWxDot" style="background:var(--color-blue);width:6px;height:6px;border-radius:50%"></span> <span id="liveWxBtnText">Fetch Live Forecast</span>
+                </button>
               </div>
             </div>
 
@@ -2046,6 +2054,18 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
             </div>
           </div>
 
+          <div class="card" style="grid-column: span 2">
+            <div class="card-header" style="border-bottom:1px solid var(--border-color);padding-bottom:10px">
+              <h3 class="card-title">Executive Briefing &amp; PDF Exporter</h3>
+              <span class="card-subtitle">Generate official executive reports</span>
+            </div>
+            <p style="font-size:11.5px;color:var(--text-secondary);margin-top:4px">Compiles the active platform summary KPIs, environmental risk logs, weather operational recommendations, and alert logs into a formatted PDF briefing document.</p>
+            <div style="display:flex;gap:10px;margin-top:10px">
+              <button onclick="generateExecutivePDFReport()" class="dl-btn" style="background:var(--color-green-bg);color:var(--color-green);border:1px solid rgba(34,197,94,0.25);font-weight:700">
+                📄 Export Executive PDF Briefing
+              </button>
+            </div>
+          </div>
         </div>
       </div><!-- /page-reports -->
 
@@ -2733,17 +2753,23 @@ const TRANSLATIONS = {
   "Executive Overview": {
     en: "Executive Overview",
     hi: "कार्यकारी अवलोकन",
-    bn: "কার্যকরী সংক্ষিপ্ত বিবরণ"
+    bn: "কার্যকরী সংক্ষিপ্ত বিবরণ",
+    or: "କାର୍ଯ୍ୟନିର୍ବାହୀ ସମୀକ୍ଷା",
+    mr: "कार्यकारी आढावा"
   },
   "Operational Risk Map": {
     en: "Operational Risk Map",
     hi: "परिचालन जोखिम मानचित्र",
-    bn: "পরিচালন ঝুঁকি মানচিত্র"
+    bn: "পরিচালন ঝুঁকি মানচিত্র",
+    or: "କାର୍ଯ୍ୟକ୍ଷମ ବିପଦ ମାନଚିତ୍ର",
+    mr: "कार्यात्मक धोका नकाशा"
   },
   "Mine Registry & Profiler": {
     en: "Mine Registry & Profiler",
     hi: "खान रजिस्ट्री और प्रोफाइलर",
-    bn: "খনি রেজিস্ট্রি ও প্রোফাইল"
+    bn: "খনি রেজিস্ট্রি ও প্রোଫାଇଲର",
+    or: "ଖଣି ପଞ୍ଜିକରଣ ଏବଂ ପ୍ରୋଫାଇଲର୍",
+    mr: "खाण नोंदणी आणि प्रोफाइलर"
   },
   "Environmental Monitoring": {
     en: "Environmental Monitoring",
@@ -2753,42 +2779,58 @@ const TRANSLATIONS = {
   "Quality Analytics & Trends": {
     en: "Quality Analytics & Trends",
     hi: "गुणवत्ता विश्लेषण और रुझान",
-    bn: "মান বিশ্লেষণ ও প্রবণতা"
+    bn: "মান विश्लेषण ও প্রবণতা",
+    or: "ଗୁଣବତ୍ତା ବିଶ୍ଳେଷଣ ଏବଂ ଟ୍ରେଣ୍ଡ୍",
+    mr: "गुणवत्ता विश्लेषण आणि ट्रेंड"
   },
   "Environmental Insights": {
     en: "Environmental Insights",
     hi: "पर्यावरणीय अंतर्दृष्टि",
-    bn: "পরিবেশগত অন্তর্দৃষ্টি"
+    bn: "পরিবেশগত অন্তর্দৃষ্টি",
+    or: "ପରିବେଶ ଅନ୍ତର୍ଦୃଷ୍ଟି",
+    mr: "पर्यावरणीय अंतर्दृष्टी"
   },
   "AI Quality Forecaster": {
     en: "AI Quality Forecaster",
     hi: "एआई गुणवत्ता भविष्यवक्ता",
-    bn: "এআই মান পূর্বাভাসক"
+    bn: "এআই মান পূর্বাভাসক",
+    or: "AI ଗୁଣବତ୍ତା ପୂର୍ବାନୁମାନକାରୀ",
+    mr: "AI गुणवत्ता अंदाजक"
   },
   "Prediction Insights": {
     en: "Prediction Insights",
     hi: "पूर्वानुमान अंतर्दृष्टि",
-    bn: "পূর্বাভাস অন্তর্দৃষ্টি"
+    bn: "পূর্বাভাস অন্তর্দৃষ্টি",
+    or: "ପୂର୍ବାନୁମାନ ଅନ୍ତର୍ଦୃଷ୍ଟି",
+    mr: "अंदाज अंतर्दृष्टी"
   },
   "What-If Quality Simulator": {
     en: "What-If Quality Simulator",
     hi: "व्हाट-इफ गुणवत्ता सिम्युलेटर",
-    bn: "হোয়াট-ইফ মান সিমুলেটর"
+    bn: "হোয়াট-ইফ মান ସିମ୍ୟୁଲେଟର",
+    or: "What-If ଗୁଣବତ୍ତା ସିମ୍ୟୁଲେଟର",
+    mr: "What-If गुणवत्ता सिम्युलेटर"
   },
   "Operational Alerts Log": {
     en: "Operational Alerts Log",
     hi: "परिचालन अलर्ट लॉग",
-    bn: "পরিচালন সতর্কতা লগ"
+    bn: "পরিচালন সতর্কতা লগ",
+    or: "କାର୍ଯ୍ୟକ୍ଷମ ସତର୍କତା ଲଗ୍",
+    mr: "कार्यात्मक अलर्ट लॉग"
   },
   "Reports & Exports Hub": {
     en: "Reports & Exports Hub",
     hi: "रिपोर्ट और निर्यात हब",
-    bn: "রিপোর্ট ও রপ্তানি হাব"
+    bn: "রিপোর্ট ও রপ্তানি হাব",
+    or: "ରିପୋର୍ଟ ଏବଂ ରପ୍ତାନି ହବ୍",
+    mr: "अहवाल आणि निर्यात केंद्र"
   },
   "System Status": {
     en: "System Status",
     hi: "सिस्टम की स्थिति",
-    bn: "সিস্টেমের অবস্থা"
+    bn: "সিস্টেমের অবস্থা",
+    or: "ସିଷ୍ଟମ୍ ସ୍ଥିତି",
+    mr: "प्रणालीची स्थिती"
   },
 
   // Subtitles containing BQ & OD details
@@ -2951,7 +2993,7 @@ function switchLanguage(lang) {
   // Update Topbar Label
   const label = document.getElementById('currentLangLabel');
   if (label) {
-    label.textContent = lang === 'en' ? 'English' : lang === 'hi' ? 'हिन्दी' : 'বাংলা';
+    label.textContent = lang === 'en' ? 'English' : lang === 'hi' ? 'हिन्दी' : lang === 'bn' ? 'বাংলা' : lang === 'or' ? 'ଓଡ଼ିଆ' : 'मराठी';
   }
 
   // 1. Sidebar items translation
@@ -2962,7 +3004,7 @@ function switchLanguage(lang) {
       const icon = iconSpan ? iconSpan.outerHTML : '';
       const badge = item.querySelector('.nav-badge');
       const badgeHtml = badge ? badge.outerHTML : '';
-      item.innerHTML = icon + ' ' + TRANSLATIONS[page][lang] + badgeHtml;
+      item.innerHTML = icon + ' ' + (TRANSLATIONS[page][lang] || TRANSLATIONS[page]['en']) + badgeHtml;
     }
   });
 
@@ -2970,28 +3012,28 @@ function switchLanguage(lang) {
   document.querySelectorAll('.nav-group-header span:first-child').forEach(span => {
     const text = span.textContent.trim();
     if (TRANSLATIONS[text]) {
-      span.textContent = TRANSLATIONS[text][lang];
+      span.textContent = TRANSLATIONS[text][lang] || TRANSLATIONS[text]['en'];
     }
   });
 
   // 3. Quick Access links translation
   const qaTitle = document.querySelector('.qa-title');
   if (qaTitle && TRANSLATIONS["Quick Access"]) {
-    qaTitle.textContent = TRANSLATIONS["Quick Access"][lang];
+    qaTitle.textContent = TRANSLATIONS["Quick Access"][lang] || TRANSLATIONS["Quick Access"]['en'];
   }
   document.querySelectorAll('.qa-row').forEach(row => {
     const text = row.textContent.trim();
     const prefixNode = row.querySelector('.qa-pip');
     const prefix = prefixNode ? prefixNode.outerHTML : '';
     if (TRANSLATIONS[text]) {
-      row.innerHTML = prefix + ' ' + TRANSLATIONS[text][lang];
+      row.innerHTML = prefix + ' ' + (TRANSLATIONS[text][lang] || TRANSLATIONS[text]['en']);
     }
   });
 
   // 4. Topbar elements translation
   const globSearch = document.getElementById('globalSearch');
   if (globSearch && TRANSLATIONS["global_search_placeholder"]) {
-    globSearch.placeholder = TRANSLATIONS["global_search_placeholder"][lang];
+    globSearch.placeholder = TRANSLATIONS["global_search_placeholder"][lang] || TRANSLATIONS["global_search_placeholder"]['en'];
   }
 
   // 5. Active Page Title & dynamic BQ/OD subtitle translation
@@ -2999,11 +3041,11 @@ function switchLanguage(lang) {
   if (activeNav) {
     const pageName = activeNav.dataset.page;
     if (TRANSLATIONS[pageName]) {
-      document.getElementById('pageTitle').textContent = TRANSLATIONS[pageName][lang];
+      document.getElementById('pageTitle').textContent = TRANSLATIONS[pageName][lang] || TRANSLATIONS[pageName]['en'];
       
       const subKey = `subtitle_${pageName.replace(/ & /g, '_&_').replace(/\s+/g, '_').toLowerCase()}`;
       if (TRANSLATIONS[subKey]) {
-        document.getElementById('pageSubtitle').textContent = TRANSLATIONS[subKey][lang];
+        document.getElementById('pageSubtitle').textContent = TRANSLATIONS[subKey][lang] || TRANSLATIONS[subKey]['en'];
       }
     }
   }
@@ -3012,7 +3054,7 @@ function switchLanguage(lang) {
   document.querySelectorAll('.card-title').forEach(title => {
     const text = title.textContent.trim();
     if (TRANSLATIONS[text]) {
-      title.textContent = TRANSLATIONS[text][lang];
+      title.textContent = TRANSLATIONS[text][lang] || TRANSLATIONS[text]['en'];
     }
   });
   document.querySelectorAll('.card-header h3').forEach(title => {
@@ -5026,7 +5068,12 @@ async function loadWxExplorerTimeseries() {
   const mineCode = document.getElementById('wxExplorerMine').value;
   if (!mineCode) return;
   
-  const data = await apiFetch(`/api/environmental/mines/${mineCode}/timeseries?start_date=2025-04-01&end_date=2026-03-31`);
+  let url = `/api/environmental/mines/${mineCode}/timeseries?start_date=2025-04-01&end_date=2026-03-31`;
+  if (window.isLiveWeatherActive) {
+    url = `/api/environmental/mines/${mineCode}/live-weather`;
+  }
+  
+  const data = await apiFetch(url);
   if (!data || !data.data || !data.data.length) {
     _currentWxTimeseriesData = [];
     plotWxExplorerChart();
@@ -5583,7 +5630,7 @@ async function loadPredictionWorkspaceTab(target) {
       const dir = a.attribution_score > 0 ? '+' : '–';
       
       barsContainer.innerHTML += `
-        <div class="ei-bar-row">
+        <div class="ei-bar-row" style="cursor:pointer" onclick="showFeatureSHAPExplanation('${a.feature}', ${a.attribution_score})" title="Click to view explainability detail">
           <span class="ei-factor" style="width:110px" title="${a.feature}">${varName(a.feature)}</span>
           <div class="ei-bar-wrap"><div class="ei-bar-fill" style="width:${pct.toFixed(0)}%;background:${color}"></div></div>
           <span class="ei-pct" style="width:50px;text-align:right">${dir}${Math.abs(a.attribution_score).toFixed(1)}</span>
@@ -5878,7 +5925,7 @@ async function runExplanation() {
         const color = a.attribution_score > 0 ? 'var(--color-red)' : 'var(--color-green)';
         const dir = a.attribution_score > 0 ? '↑' : '↓';
         return `
-          <div class="ei-bar-row">
+          <div class="ei-bar-row" style="cursor:pointer" onclick="showFeatureSHAPExplanation('${a.feature}', ${a.attribution_score})" title="Click to view explainability detail">
             <span class="ei-full-rank" style="font-size:10px;color:var(--text-tertiary);width:15px">${a.rank}</span>
             <span class="ei-factor" style="width:110px">${varName(a.feature)} ${dir}</span>
             <div class="ei-bar-wrap"><div class="ei-bar-fill" style="width:${pct.toFixed(0)}%;background:${color}"></div></div>
@@ -6000,6 +6047,271 @@ async function initSettings() {
   // Load language settings on startup
   switchLanguage(localStorage.getItem('activeLanguage') || 'en');
 })();
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NEW INTEGRATED FEATURES (LIVE WEATHER, PDF EXPORTER, INTERACTIVE SHAP POPUP)
+// ═══════════════════════════════════════════════════════════════════════════
+window.isLiveWeatherActive = false;
+
+async function toggleLiveWeather() {
+  const btn = document.getElementById('liveWxBtn');
+  const dot = document.getElementById('liveWxDot');
+  const text = document.getElementById('liveWxBtnText');
+  
+  window.isLiveWeatherActive = !window.isLiveWeatherActive;
+  
+  if (window.isLiveWeatherActive) {
+    // Style as Active Live state
+    btn.style.background = 'rgba(34, 197, 94, 0.15)';
+    btn.style.color = '#22c55e';
+    btn.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+    dot.style.background = '#22c55e';
+    text.textContent = '● Live Forecast Active';
+    
+    // Automatically set range selector to 7D (forecast length)
+    switchWxTimeRange(7);
+  } else {
+    // Reset to Default state
+    btn.style.background = 'var(--color-blue-bg)';
+    btn.style.color = 'var(--color-blue)';
+    btn.style.borderColor = 'rgba(59, 130, 246, 0.25)';
+    dot.style.background = 'var(--color-blue)';
+    text.textContent = 'Fetch Live Forecast';
+    
+    // Reset range selector to 90D default
+    switchWxTimeRange(90);
+  }
+}
+
+// PDF EXPORT NATIVE TEMPLATE COMPILER
+async function generateExecutivePDFReport() {
+  // Pull current status values from the dashboard
+  const kpiHealth = document.querySelector('.card:nth-child(1) .pair-val')?.innerText || '49.7 /100';
+  const kpiMines = document.querySelector('.card:nth-child(2) .pair-val')?.innerText || '305';
+  const kpiRisk = document.querySelector('.card:nth-child(3) .pair-val')?.innerText || '41';
+  const kpiGcv = document.querySelector('.card:nth-child(4) .pair-val')?.innerText || '4,532 kcal/kg';
+  const kpiMoist = document.querySelector('.card:nth-child(5) .pair-val')?.innerText || '10.94 %';
+  const kpiAlerts = document.querySelector('.card:nth-child(6) .pair-val')?.innerText || '4';
+  
+  // Extract weather operational recommendations list
+  const recsList = document.getElementById('wxOpsList')?.innerHTML || '<div>No immediate recommendations available.</div>';
+  
+  // Extract active alert elements
+  const alertsList = document.getElementById('wxEventsList')?.innerHTML || '<div>No active environmental risk alerts logged.</div>';
+  
+  // Grab the official logo image src
+  const logoSrc = document.querySelector('.logo-mark img')?.src || '';
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Coal Quality Intelligence Briefing</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 40px; color: #1e293b; background: #ffffff; line-height: 1.5; }
+          .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 16px; margin-bottom: 24px; }
+          .header-left { display: flex; align-items: center; gap: 12px; }
+          .logo { width: 50px; height: 50px; object-fit: contain; }
+          .title { font-size: 20px; font-weight: 700; color: #05150f; text-transform: uppercase; margin: 0; }
+          .subtitle { font-size: 11px; color: #64748b; margin-top: 2px; }
+          .meta { text-align: right; font-size: 11px; color: #64748b; }
+          .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+          .kpi-card { border: 1px solid #e2e8f0; padding: 12px; border-radius: 0px; background: #f8fafc; }
+          .kpi-title { font-size: 10px; text-transform: uppercase; font-weight: 700; color: #64748b; }
+          .kpi-value { font-size: 18px; font-weight: 700; color: #0f172a; margin-top: 4px; }
+          .section { margin-bottom: 24px; }
+          .section-title { font-size: 13px; font-weight: 700; color: #05150f; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 12px; }
+          .bullet-list { font-size: 11.5px; color: #334155; }
+          .bullet-list div { margin-bottom: 6px; display: flex; gap: 6px; }
+          .footer { margin-top: 40px; border-top: 1px solid #cbd5e1; padding-top: 10px; font-size: 9.5px; color: #94a3b8; text-align: center; }
+          @media print {
+            body { padding: 20px; }
+            button { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div style="display:flex; justify-content:flex-end; margin-bottom: 20px;">
+          <button onclick="window.print();" style="background:#1B3A2B; color:white; border:none; padding:8px 16px; font-weight:bold; cursor:pointer;">🖨 Print / Save PDF</button>
+        </div>
+        
+        <div class="header">
+          <div class="header-left">
+            ${logoSrc ? `<img src="${logoSrc}" class="logo">` : ''}
+            <div>
+              <h1 class="title">Coal India Limited</h1>
+              <div class="subtitle">Coal Quality &amp; Environmental Intelligence Briefing</div>
+            </div>
+          </div>
+          <div class="meta">
+            <div><strong>Report:</strong> Executive Status Summary</div>
+            <div><strong>Generated:</strong> ${new Date().toLocaleString()}</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">National Summary KPIs</div>
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-title">National Coal Health</div>
+              <div class="kpi-value">${kpiHealth}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Active Mapped Mines</div>
+              <div class="kpi-value">${kpiMines}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">High Risk Mines</div>
+              <div class="kpi-value">${kpiRisk}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Average GCV</div>
+              <div class="kpi-value">${kpiGcv}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Average Moisture</div>
+              <div class="kpi-value">${kpiMoist}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Active Weather Alerts</div>
+              <div class="kpi-value">${kpiAlerts}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Recommended Operational Actions</div>
+          <div class="bullet-list">
+            ${recsList}
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Active Environmental Alerts Log</div>
+          <div class="bullet-list">
+            ${alertsList}
+          </div>
+        </div>
+
+        <div class="footer">
+          Official Internal Briefing Document -- Coal Quality Intelligence Platform (GQI). Confidential &amp; Proprietary.
+        </div>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+
+// INTERACTIVE SHAP FEATURE EXPLAINABILITY modal
+const FEATURE_EXPLANATIONS = {
+  relative_humidity_mean_pct: {
+    title: "Mean Relative Humidity",
+    definition: "The daily average percentage of water vapor saturation in the atmosphere.",
+    interpretation: "High humidity limits the evaporation of surface water from exposed stockpiles. A negative SHAP score indicates that high humidity is slowing down natural yard drying, allowing moisture to accumulate and lowering standard GCV.",
+    why_matters: "Monitors ambient moisture threat level. When humidity stays elevated, operations prioritize covered coal yard retrieval and blending runs."
+  },
+  precipitation_sum_mm: {
+    title: "Daily Rainfall Amount",
+    definition: "Total rain accumulation recorded at the mine station during the 24-hour cycle.",
+    interpretation: "Rain directly wets pit faces and stockpiles. A negative GCV attribution indicates rain is diluting calorific energy value, while a positive moisture attribution shows direct moisture absorption.",
+    why_matters: "Triggers immediate emergency stock covers and sump pump activation on open pit floors."
+  },
+  shortwave_radiation_sum_mj: {
+    title: "Solar Radiation Sum",
+    definition: "Total incoming solar energy flux hitting the ground surface over the course of the day.",
+    interpretation: "A positive SHAP score indicates active thermal solar drying. Higher solar values accelerate direct surface evaporation, lowering moisture percent and preserving calorific values.",
+    why_matters: "Directly tracks drying rate. High solar values allow yards to spread stockpile layers thin for fast natural drying."
+  },
+  wind_speed_10m_max_kmh: {
+    title: "Max Wind Speed",
+    definition: "The highest representative wind speed recorded at 10 meters height during the daily cycle.",
+    interpretation: "Higher winds speed up convective air drying on stockpile surfaces, carrying evaporated moisture boundaries away.",
+    why_matters: "Helps verify natural drying assistance. However, gusting above thresholds requires dust suppression sprays."
+  },
+  wind_gust_max_kmh: {
+    title: "Max Wind Gust",
+    definition: "The maximum short-duration peak wind speed recorded during the daily observation period.",
+    interpretation: "wind gusts contribute to surface moisture loss but can also introduce variance in stockpile drying rates.",
+    why_matters: "Helps trace weather turbulence impact on stockpiles."
+  },
+  surface_pressure_mean_hpa: {
+    title: "Mean Surface Barometric Pressure",
+    definition: "The average barometric atmospheric pressure recorded at ground level.",
+    interpretation: "Low pressure cycles correlate with approaching warm storm fronts, signaling incoming humidity and rain cycles.",
+    why_matters: "Serves as a reliable early indicator for incoming weather front changes."
+  },
+  cloud_cover_mean_pct: {
+    title: "Mean Cloud Cover",
+    definition: "The daily average percentage of the sky obscured by clouds.",
+    interpretation: "High cloud cover blocks solar radiation, slowing natural drying rates in the coal yard.",
+    why_matters: "Helps schedule drying runs, as solar drying is severely limited under overcast skies."
+  },
+  visibility_mean_m: {
+    title: "Mean Atmospheric Visibility",
+    definition: "The average horizontal visibility distance recorded in meters.",
+    interpretation: "Low visibility corresponds to mist, fog, or high particulate dust, which correlates with damp atmosphere layers.",
+    why_matters: "Indicates humid mist layers affecting drying rates."
+  },
+  temperature_2m_mean_c: {
+    title: "Mean Temperature",
+    definition: "The average air temperature recorded 2 meters above ground level.",
+    interpretation: "Higher ambient temperatures increase air moisture capacity, accelerating overall evaporation speeds.",
+    why_matters: "Governs base thermodynamic drying rates across stockpiles."
+  }
+};
+
+function showFeatureSHAPExplanation(featureName, score) {
+  const mappingKey = Object.keys(FEATURE_EXPLANATIONS).find(k => featureName.toLowerCase().includes(k.replace(/_mean|_sum|_max/g, '').toLowerCase())) || featureName;
+  const info = FEATURE_EXPLANATIONS[mappingKey] || {
+    title: varName(featureName),
+    definition: "Daily weather parameter registered by the mine's AWS station.",
+    interpretation: score > 0 ? "A positive attribution score indicates this variable increases the target parameter value." : "A negative attribution score indicates this variable decreases the target parameter value.",
+    why_matters: "Monitored as part of the Environmental Variable Layer to prevent quality degradation."
+  };
+
+  const modal = document.createElement('div');
+  modal.id = 'shapExplanationModal';
+  modal.style = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(5,21,15,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+  
+  const scoreColor = score > 0 ? 'var(--color-red)' : 'var(--color-green)';
+  const scoreSign = score > 0 ? '+' : '';
+
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:0px;width:440px;padding:24px;box-shadow:var(--shadow-premium);position:relative">
+      <button onclick="closeShapModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text-tertiary);font-size:18px;cursor:pointer;font-weight:700">✕</button>
+      
+      <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">AI Shapley Driver Explainer</div>
+      <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:14px;border-bottom:1px solid var(--border-color);padding-bottom:6px">${info.title}</h3>
+      
+      <div style="margin-bottom:12px;font-size:11.5px">
+        <strong style="color:var(--text-primary);display:block;margin-bottom:3px">Definition:</strong>
+        <span style="color:var(--text-secondary);line-height:1.4">${info.definition}</span>
+      </div>
+
+      <div style="margin-bottom:12px;font-size:11.5px">
+        <strong style="color:var(--text-primary);display:block;margin-bottom:3px">Model Impact Score: <span style="color:${scoreColor}">${scoreSign}${score.toFixed(3)}</span></strong>
+        <span style="color:var(--text-secondary);line-height:1.4">${info.interpretation}</span>
+      </div>
+
+      <div style="margin-bottom:18px;font-size:11.5px">
+        <strong style="color:var(--text-primary);display:block;margin-bottom:3px">Why it matters for Operations:</strong>
+        <span style="color:var(--text-secondary);line-height:1.4">${info.why_matters}</span>
+      </div>
+
+      <button onclick="closeShapModal()" class="dl-btn" style="width:100%;text-align:center;justify-content:center;height:32px;font-weight:700">
+        Close Explainer
+      </button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function closeShapModal() {
+  const modal = document.getElementById('shapExplanationModal');
+  if (modal) modal.remove();
+}
+
 
 // Document dropdown dismissal event listener
 document.addEventListener('click', function(e) {
