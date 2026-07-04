@@ -22,7 +22,7 @@
    PREMIUM ENTERPRISE LIGHT DESIGN SYSTEM (Power BI & ArcGIS Pro Aesthetics)
    ═══════════════════════════════════════════════════════════════════════════ */
 :root {
-  --bg-app:          #c2d7c7; /* Distinct soft sage green page background */
+  --bg-app:          #5ec269; /* Distinct soft sage green page background */
   --bg-sidebar:      #05150f; /* Branded forest green dark slate */
   --bg-card:         #ffffff; /* Pure white cards */
   --bg-card-hover:   #f9fafb;
@@ -52,9 +52,9 @@
 
   --sidebar-w:       240px;
   --topbar-h:        64px;
-  --radius-sm:       6px;
-  --radius-md:       10px;
-  --radius-lg:       16px; /* High radius for premium rounded panels */
+  --radius-sm:       0px;
+  --radius-md:       0px;
+  --radius-lg:       0px; /* High radius for premium rounded panels */
 
   --shadow-sm:       0 1px 2px 0 rgba(0, 0, 0, 0.03);
   --shadow-md:       0 4px 6px -1px rgba(15, 23, 42, 0.04), 0 2px 4px -2px rgba(15, 23, 42, 0.02);
@@ -70,7 +70,7 @@
 html, body { height: 100%; overflow: hidden; background: var(--bg-app); color: var(--text-primary); font-family: var(--font-sans); font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius:0px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 
 /* ── BASE CONTAINER LAYOUT ────────────────────────────────────────────── */
@@ -98,7 +98,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg-app); color: v
 .nav-item.active { color: #ffffff; background: rgba(22, 163, 74, 0.16); border-left-color: #22c55e; }
 .nav-icon { font-size: 14px; width: 16px; text-align: center; opacity: 0.8; }
 .nav-item.active .nav-icon { opacity: 1; color: #22c55e; }
-.nav-badge { margin-left: auto; background: var(--color-red); color: #fff; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 10px; }
+.nav-badge { margin-left: auto; background: var(--color-red); color: #fff; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius:0px; }
 
 .sidebar-sep { height: 1px; background: rgba(255, 255, 255, 0.08); margin: 12px 24px; }
 .sidebar-qa { padding: 8px 24px; }
@@ -125,7 +125,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg-app); color: v
 .page-heading p { display: none !important; }
 
 .tb-search { flex: 1; max-width: 260px; min-width: 120px; position: relative; }
-.search-wrapper { display: flex; align-items: center; gap: 8px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 20px; padding: 0 16px; height: 36px; transition: all 0.2s ease; }
+.search-wrapper { display: flex; align-items: center; gap: 8px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius:0px; padding: 0 16px; height: 36px; transition: all 0.2s ease; }
 .search-wrapper:focus-within { border-color: var(--border-focus); box-shadow: 0 0 0 1px var(--border-focus); background: var(--bg-card); }
 .search-wrapper input { background: none; border: none; outline: none; color: var(--text-primary); font-size: 12px; font-family: inherit; width: 100%; }
 .search-wrapper input::placeholder { color: var(--text-tertiary); }
@@ -133,7 +133,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg-app); color: v
 .search-dropdown { display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-premium); z-index: 2000; max-height: 320px; overflow-y: auto; }
 
 .tb-controls { margin-left: auto; display: flex; align-items: center; gap: 6px; }
-.tb-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 18px; padding: 6px 12px; font-size: 11px; color: var(--text-secondary); cursor: pointer; white-space: nowrap; transition: all 0.2s ease; max-width: 160px; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.tb-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius:0px; padding: 6px 12px; font-size: 11px; color: var(--text-secondary); cursor: pointer; white-space: nowrap; transition: all 0.2s ease; max-width: 160px; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
 .tb-chip:hover { border-color: var(--border-hover); color: var(--text-primary); background: var(--bg-card); }
 .tb-chip.active { background: var(--color-green-bg); border-color: var(--color-green); color: var(--color-green); }
 .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-green); }
@@ -243,7 +243,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg-app); color: v
 .mi-header { padding: 18px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-start; background: rgba(0, 0, 0, 0.005); }
 .mi-mine-name { font-size: 15px; font-weight: 700; color: var(--text-primary); font-family: var(--font-display); }
 .mi-mine-meta { font-size: 10.5px; color: var(--text-secondary); margin-top: 3px; }
-.mi-status-badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: var(--color-green-bg); color: var(--color-green); border: 1px solid rgba(16,185,129,0.2); }
+.mi-status-badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius:0px; background: var(--color-green-bg); color: var(--color-green); border: 1px solid rgba(16,185,129,0.2); }
 .mi-close { cursor: pointer; color: var(--text-tertiary); transition: color 0.15s; font-size: 13px; }
 .mi-close:hover { color: var(--text-primary); }
 
@@ -277,17 +277,17 @@ html, body { height: 100%; overflow: hidden; background: var(--bg-app); color: v
 .env-influence { padding: 0 24px 18px; border-bottom: 1px solid var(--border-color); }
 .ei-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .ei-target-tabs { display: flex; gap: 6px; }
-.ei-tab { font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 4px; cursor: pointer; color: var(--text-tertiary); background: var(--bg-input); border: 1px solid var(--border-color); transition: all 0.15s; }
+.ei-tab { font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius:0px; cursor: pointer; color: var(--text-tertiary); background: var(--bg-input); border: 1px solid var(--border-color); transition: all 0.15s; }
 .ei-tab.active { background: var(--color-blue-bg); border-color: var(--color-blue); color: var(--color-blue); }
 
 .ei-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .ei-factor { font-size: 10.5px; color: var(--text-secondary); width: 85px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ei-bar-wrap { flex: 1; height: 6px; background: var(--bg-input); border-radius: 3px; overflow: hidden; }
-.ei-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.ei-bar-wrap { flex: 1; height: 6px; background: var(--bg-input); border-radius:0px; overflow: hidden; }
+.ei-bar-fill { height: 100%; border-radius:0px; transition: width 0.4s ease; }
 .ei-pct { font-size: 10px; color: var(--text-secondary); font-family: var(--font-mono); width: 30px; text-align: right; flex-shrink: 0; font-weight: 600; }
 
 .mi-archetype { padding: 14px 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; }
-.archetype-chip { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; color: var(--color-green); background: var(--color-green-bg); border: 1px solid rgba(22,163,74,0.25); border-radius: 4px; padding: 4px 10px; }
+.archetype-chip { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; color: var(--color-green); background: var(--color-green-bg); border: 1px solid rgba(22,163,74,0.25); border-radius:0px; padding: 4px 10px; }
 .conf-row { display: flex; align-items: center; gap: 8px; font-size: 11.5px; }
 .conf-label { color: var(--text-tertiary); }
 .conf-val { font-weight: 600; color: var(--text-secondary); font-family: var(--font-mono); }
@@ -312,7 +312,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg-app); color: v
 .data-table td.mine-nm:hover { color: var(--color-green); text-decoration: underline; }
 .data-table td.mono { font-family: var(--font-mono); font-size: 11.5px; font-weight: 500; }
 
-.risk-pill { padding: 4px 10px; border-radius: 4px; font-size: 9.5px; font-weight: 700; text-transform: uppercase; border: 1px solid transparent; display: inline-block; }
+.risk-pill { padding: 4px 10px; border-radius:0px; font-size: 9.5px; font-weight: 700; text-transform: uppercase; border: 1px solid transparent; display: inline-block; }
 .risk-pill.high { background: var(--color-red-bg); color: var(--color-red); border-color: rgba(239,68,68,0.15); }
 .risk-pill.mod { background: var(--color-amber-bg); color: var(--color-amber); border-color: rgba(217,119,6,0.15); }
 .risk-pill.low { background: var(--color-green-bg); color: var(--color-green); border-color: rgba(16,185,129,0.15); }
@@ -406,7 +406,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
 .slider-control { display: flex; flex-direction: column; gap: 6px; }
 .slider-header { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--text-secondary); }
 .slider-header span.val { color: var(--color-green); font-family: var(--font-mono); }
-.slider-control input[type="range"] { -webkit-appearance: none; width: 100%; height: 6px; border-radius: 3px; background: var(--border-color); outline: none; }
+.slider-control input[type="range"] { -webkit-appearance: none; width: 100%; height: 6px; border-radius:0px; background: var(--border-color); outline: none; }
 .slider-control input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--color-green); cursor: pointer; transition: transform 0.1s; }
 .slider-control input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
 
@@ -952,7 +952,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
             </div>
 
             <!-- 3. Primary Environmental Driver -->
-            <div id="eibPrimaryDriverCard" style="background:rgba(0, 0, 0, 0.02);border:1px solid var(--border-color);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px">
+            <div id="eibPrimaryDriverCard" style="background:rgba(0, 0, 0, 0.02);border:1px solid var(--border-color);border-radius:0px;padding:12px;display:flex;flex-direction:column;gap:6px">
               <!-- Populated dynamically -->
             </div>
 
@@ -1587,17 +1587,17 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
           </div>
           <!-- Prediction Pipeline Workflow Flowchart -->
           <div style="display:flex;align-items:center;gap:10px;font-size:10.5px;color:var(--text-secondary);overflow-x:auto;max-width:70%;">
-            <div style="background:var(--bg-input);padding:4px 8px;border-radius:4px;border:1px solid var(--border-color);white-space:nowrap;">1. Mine Selection</div>
+            <div style="background:var(--bg-input);padding:4px 8px;border-radius:0px;border:1px solid var(--border-color);white-space:nowrap;">1. Mine Selection</div>
             <span style="color:var(--text-tertiary)">➔</span>
-            <div style="background:var(--bg-input);padding:4px 8px;border-radius:4px;border:1px solid var(--border-color);white-space:nowrap;">2. Ingestion</div>
+            <div style="background:var(--bg-input);padding:4px 8px;border-radius:0px;border:1px solid var(--border-color);white-space:nowrap;">2. Ingestion</div>
             <span style="color:var(--text-tertiary)">➔</span>
-            <div style="background:var(--bg-input);padding:4px 8px;border-radius:4px;border:1px solid var(--border-color);white-space:nowrap;">3. Feature Eng.</div>
+            <div style="background:var(--bg-input);padding:4px 8px;border-radius:0px;border:1px solid var(--border-color);white-space:nowrap;">3. Feature Eng.</div>
             <span style="color:var(--text-tertiary)">➔</span>
-            <div style="background:var(--bg-input);padding:4px 8px;border-radius:4px;border:1px solid var(--border-color);white-space:nowrap;">4. Inference</div>
+            <div style="background:var(--bg-input);padding:4px 8px;border-radius:0px;border:1px solid var(--border-color);white-space:nowrap;">4. Inference</div>
             <span style="color:var(--text-tertiary)">➔</span>
-            <div style="background:var(--bg-input);padding:4px 8px;border-radius:4px;border:1px solid var(--border-color);white-space:nowrap;">5. SHAP attribution</div>
+            <div style="background:var(--bg-input);padding:4px 8px;border-radius:0px;border:1px solid var(--border-color);white-space:nowrap;">5. SHAP attribution</div>
             <span style="color:var(--text-tertiary)">➔</span>
-            <div style="background:var(--bg-input);padding:4px 8px;border-radius:4px;border:1px solid var(--border-color);white-space:nowrap;">6. Actions Brief</div>
+            <div style="background:var(--bg-input);padding:4px 8px;border-radius:0px;border:1px solid var(--border-color);white-space:nowrap;">6. Actions Brief</div>
           </div>
         </div>
 
@@ -1637,7 +1637,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
                 <option value="all">Predict All Targets</option>
               </select>
               <!-- Target Explanation block -->
-              <div id="predTargetExplanation" style="font-size:10px;color:var(--text-secondary);line-height:1.4;margin-top:6px;background:rgba(0,0,0,0.015);border:1px solid var(--border-color);border-radius:6px;padding:8px;"></div>
+              <div id="predTargetExplanation" style="font-size:10px;color:var(--text-secondary);line-height:1.4;margin-top:6px;background:rgba(0,0,0,0.015);border:1px solid var(--border-color);border-radius:0px;padding:8px;"></div>
             </div>
 
             <button onclick="runPredictionWorkspace()" class="dl-btn" style="width:100%;height:32px">
@@ -1645,7 +1645,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
             </button>
 
             <!-- About this Prediction Info panel -->
-            <div style="background:rgba(0,0,0,0.02);border:1px solid var(--border-color);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:4px">
+            <div style="background:rgba(0,0,0,0.02);border:1px solid var(--border-color);border-radius:0px;padding:10px;display:flex;flex-direction:column;gap:4px">
               <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase">About this Prediction</div>
               <div style="font-size:10.5px;color:var(--text-secondary);line-height:1.4">
                 <strong>Horizon:</strong> Next-day target estimates.<br>
@@ -1805,7 +1805,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
                     <div style="margin-top:6px">
                       <div style="font-size:10px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;margin-bottom:6px">Reliability Attribution</div>
                       <div style="display:flex;align-items:center;gap:10px">
-                        <div style="flex:1;height:6px;background:var(--bg-input);border-radius:3px;overflow:hidden;display:flex">
+                        <div style="flex:1;height:6px;background:var(--bg-input);border-radius:0px;overflow:hidden;display:flex">
                           <div id="predConfBarHigh" style="width:0%;height:100%;background:var(--color-green)"></div>
                           <div id="predConfBarMed" style="width:0%;height:100%;background:var(--color-amber)"></div>
                           <div id="predConfBarLow" style="width:0%;height:100%;background:var(--color-red)"></div>
@@ -3932,7 +3932,7 @@ function renderGISRankings(mines, envVar) {
       `<span style="color:var(--color-red);font-size:9.5px">▼ ${changeVal}%</span>`;
 
     html += `
-      <div style="background:rgba(0, 0, 0, 0.06);border:1px solid rgba(0, 0, 0, 0.08);border-radius:6px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between">
+      <div style="background:rgba(0, 0, 0, 0.06);border:1px solid rgba(0, 0, 0, 0.08);border-radius:0px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
           <input type="checkbox" style="cursor:pointer" ${cbChecked} onclick="toggleGISCompare(${m.mine_code}, this.checked); event.stopPropagation()">
           <div style="min-width:0;flex:1">
@@ -3945,7 +3945,7 @@ function renderGISRankings(mines, envVar) {
           <div style="display:flex;align-items:center;gap:6px">
             ${changeHTML}
             <button onclick="loadGISDrawerMine(${m.mine_code}, '${m.mine_name.replace(/'/g, "\\'")}')" 
-              style="background:rgba(22,163,74,0.15);color:#22c55e;border:none;border-radius:3px;padding:2px 6px;cursor:pointer;font-size:9.5px;font-weight:600">View</button>
+              style="background:rgba(22,163,74,0.15);color:#22c55e;border:none;border-radius:0px;padding:2px 6px;cursor:pointer;font-size:9.5px;font-weight:600">View</button>
           </div>
         </div>
       </div>
@@ -3986,7 +3986,7 @@ function renderGISComparisonWorkspace() {
     const moist = m.avg_moisture ? `${m.avg_moisture}%` : '—';
     
     html += `
-      <div style="background:rgba(0, 0, 0, 0.06);border:1px solid rgba(0, 0, 0, 0.08);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px">
+      <div style="background:rgba(0, 0, 0, 0.06);border:1px solid rgba(0, 0, 0, 0.08);border-radius:0px;padding:10px;display:flex;flex-direction:column;gap:6px">
         <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(0, 0, 0, 0.08);padding-bottom:4px">
           <span style="font-weight:700;color:#fff;font-size:12px">${m.mine_name} (${m.subsidiary})</span>
           <button onclick="toggleGISCompare(${m.mine_code}, false)" style="background:transparent;border:none;color:var(--color-red);cursor:pointer;font-size:11px">✕ Remove</button>
@@ -4035,10 +4035,10 @@ function renderGISMineDetails(mineCode) {
   container.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:12px">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
-        <button onclick="clearGISMineSelection()" style="background:rgba(0, 0, 0, 0.08);color:var(--text-secondary);border:none;border-radius:4px;padding:5px 8px;cursor:pointer;font-size:10.5px;font-weight:600;display:flex;align-items:center;gap:4px">
+        <button onclick="clearGISMineSelection()" style="background:rgba(0, 0, 0, 0.08);color:var(--text-secondary);border:none;border-radius:0px;padding:5px 8px;cursor:pointer;font-size:10.5px;font-weight:600;display:flex;align-items:center;gap:4px">
           ← Back to Rankings
         </button>
-        <button onclick="${compareBtnOnClick}" style="padding:4px 8px;font-size:10.5px;height:24px;display:flex;align-items:center;border-radius:4px;cursor:pointer;font-weight:700;${compareBtnStyle}">
+        <button onclick="${compareBtnOnClick}" style="padding:4px 8px;font-size:10.5px;height:24px;display:flex;align-items:center;border-radius:0px;cursor:pointer;font-weight:700;${compareBtnStyle}">
           ${compareBtnText}
         </button>
       </div>
@@ -4294,11 +4294,11 @@ function renderMineTable(mines) {
     tbody.innerHTML += `
       <tr id="registry-row-${m.mine_code}" onclick="quickSelectExplorer(${m.mine_code}, '${m.mine_name.replace(/'/g, "\\'")}')" style="cursor:pointer; transition:all 0.15s">
         <td class="mine-nm" style="font-weight:700;color:var(--text-primary)">${m.mine_name}</td>
-        <td><span style="font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.035)">${m.subsidiary}</span></td>
+        <td><span style="font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:0px;background:rgba(0,0,0,0.035)">${m.subsidiary}</span></td>
         <td class="mono" style="color:var(--text-secondary);font-weight:500">${m.mine_code}</td>
         <td class="mono" style="font-weight:700">${gcv}</td>
         <td class="mono" style="color:var(--text-secondary)">${count}</td>
-        <td><span class="action-btn-pill" style="font-size:10px;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--color-blue-bg);color:var(--color-blue);border:1px solid rgba(59,130,246,0.15);display:inline-block;transition:all 0.15s">⛏ Profile Workspace</span></td>
+        <td><span class="action-btn-pill" style="font-size:10px;font-weight:800;padding:4px 10px;border-radius:0px;background:var(--color-blue-bg);color:var(--color-blue);border:1px solid rgba(59,130,246,0.15);display:inline-block;transition:all 0.15s">⛏ Profile Workspace</span></td>
       </tr>
     `;
   });
@@ -4731,7 +4731,7 @@ function renderKBCards(filterQuery = "") {
             <h4 style="font-size:12.5px;font-weight:700;color:var(--text-primary)">${item.name}</h4>
             <span style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-tertiary)">${field} · [${item.unit}]</span>
           </div>
-          <span style="font-size:8.5px;font-weight:700;padding:2px 6px;border-radius:4px;background:${badgeBg};color:${badgeColor};white-space:nowrap">${item.type}</span>
+          <span style="font-size:8.5px;font-weight:700;padding:2px 6px;border-radius:0px;background:${badgeBg};color:${badgeColor};white-space:nowrap">${item.type}</span>
         </div>
         <div style="font-size:11px;color:var(--text-secondary);line-height:1.4">${item.definition}</div>
         <div style="border-top:1px solid rgba(0, 0, 0, 0.06);padding-top:6px;margin-top:4px">
@@ -4864,7 +4864,7 @@ function renderWeatherCenter() {
     <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px;border:none;background:linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);grid-column:span 2;box-shadow:var(--shadow-sm);border-radius:var(--radius-lg);transition:transform 0.2s">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:10.5px;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:1px">GCV Quality Model</span>
-        <span style="font-size:8.5px;font-weight:800;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;text-transform:uppercase">Active</span>
+        <span style="font-size:8.5px;font-weight:800;padding:2px 8px;border-radius:0px;background:#dbeafe;color:#1e40af;text-transform:uppercase">Active</span>
       </div>
       <div>
         <div style="font-size:26px;font-weight:800;color:#1e3a8a;font-family:var(--font-mono)">0.347</div>
@@ -4883,7 +4883,7 @@ function renderWeatherCenter() {
     <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px;border:none;background:linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);grid-column:span 2;box-shadow:var(--shadow-sm);border-radius:var(--radius-lg);transition:transform 0.2s">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:10.5px;font-weight:800;color:#065f46;text-transform:uppercase;letter-spacing:1px">Moisture Quality Model</span>
-        <span style="font-size:8.5px;font-weight:800;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;text-transform:uppercase">Active</span>
+        <span style="font-size:8.5px;font-weight:800;padding:2px 8px;border-radius:0px;background:#d1fae5;color:#065f46;text-transform:uppercase">Active</span>
       </div>
       <div>
         <div style="font-size:26px;font-weight:800;color:#064e3b;font-family:var(--font-mono)">0.359</div>
@@ -4902,7 +4902,7 @@ function renderWeatherCenter() {
     <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px;border:none;background:linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);grid-column:span 2;box-shadow:var(--shadow-sm);border-radius:var(--radius-lg);transition:transform 0.2s">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:10.5px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:1px">Ash Quality Model</span>
-        <span style="font-size:8.5px;font-weight:800;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;text-transform:uppercase">Active</span>
+        <span style="font-size:8.5px;font-weight:800;padding:2px 8px;border-radius:0px;background:#fef3c7;color:#92400e;text-transform:uppercase">Active</span>
       </div>
       <div>
         <div style="font-size:26px;font-weight:800;color:#78350f;font-family:var(--font-mono)">0.230</div>
@@ -4963,7 +4963,7 @@ function renderWeatherCenter() {
         </div>
         <div style="text-align:right">
           <div style="font-size:14px;font-weight:800;${countStyle}">${spec.count} <span style="font-size:10px;font-weight:600;opacity:0.8">(${pct}%)</span></div>
-          <span style="font-size:8.5px;font-weight:800;padding:2px 6px;border-radius:12px;margin-top:4px;display:inline-block;text-transform:uppercase;${pillStyle}">${severity}</span>
+          <span style="font-size:8.5px;font-weight:800;padding:2px 6px;border-radius:0px;margin-top:4px;display:inline-block;text-transform:uppercase;${pillStyle}">${severity}</span>
         </div>
       </div>
     `;
@@ -4999,7 +4999,7 @@ function renderWeatherCenter() {
       WCL: 'background:#fef2f2;color:#991b1b;border:1px solid #fee2e2'
     };
     const subStyle = subColors[h.subsidiary] || 'background:var(--bg-input);color:var(--text-secondary);border:1px solid var(--border-color)';
-    const subPill = `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;${subStyle}">${h.subsidiary}</span>`;
+    const subPill = `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:0px;${subStyle}">${h.subsidiary}</span>`;
 
     let eriClass = "low";
     if (h.eri > 60) eriClass = "high";
@@ -5394,7 +5394,7 @@ function askPredictionAssistant(question) {
   // Append user question bubble
   const userMsg = document.createElement('div');
   userMsg.style = 'margin-bottom:8px;text-align:right;';
-  userMsg.innerHTML = `<span style="background:var(--color-blue-bg);color:var(--color-blue);padding:6px 10px;border-radius:8px;font-size:11px;display:inline-block;max-width:80%;text-align:left;">${question}</span>`;
+  userMsg.innerHTML = `<span style="background:var(--color-blue-bg);color:var(--color-blue);padding:6px 10px;border-radius:0px;font-size:11px;display:inline-block;max-width:80%;text-align:left;">${question}</span>`;
   log.appendChild(userMsg);
   
   // Fetch active workspace details
@@ -5461,7 +5461,7 @@ function askPredictionAssistant(question) {
   setTimeout(() => {
     const aiMsg = document.createElement('div');
     aiMsg.style = 'margin-bottom:8px;text-align:left;';
-    aiMsg.innerHTML = `<span style="background:rgba(0,0,0,0.04);color:var(--text-primary);padding:8px 12px;border-radius:8px;font-size:11px;display:inline-block;max-width:80%;line-height:1.45;">🤖 <strong>AI Assistant:</strong> ${answer}</span>`;
+    aiMsg.innerHTML = `<span style="background:rgba(0,0,0,0.04);color:var(--text-primary);padding:8px 12px;border-radius:0px;font-size:11px;display:inline-block;max-width:80%;line-height:1.45;">🤖 <strong>AI Assistant:</strong> ${answer}</span>`;
     log.appendChild(aiMsg);
     log.scrollTop = log.scrollHeight;
   }, 350);
