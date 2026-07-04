@@ -1,3 +1,13 @@
+---
+title: Coal Quality Intelligence
+emoji: 📊
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+app_port: 7860
+---
+
 # Coal Quality Intelligence Platform
 ## Coal India Limited — Environmental Intelligence Engine
 
