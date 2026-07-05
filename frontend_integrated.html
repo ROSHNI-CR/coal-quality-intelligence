@@ -1413,6 +1413,14 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
             <div style="height:280px;position:relative">
               <canvas id="wxExplorerChart"></canvas>
             </div>
+
+            <!-- Non-Technical Summary / Executive Insight Panel -->
+            <div style="background:rgba(0,0,0,0.015);border:1px solid var(--border-color);padding:12px;border-radius:0px;margin-top:10px;font-size:11.5px" id="wxExecutiveInsight">
+              <strong style="color:var(--text-primary);display:block;margin-bottom:4px">💡 Plain-English Interpretation for Leadership:</strong>
+              <span style="color:var(--text-secondary);line-height:1.45" id="wxExecutiveInsightText">
+                Analyzing weather trends... select a mine station to retrieve plain-english operational insights.
+              </span>
+            </div>
           </div>
 
           <div class="card col-3" style="padding:20px;display:flex;flex-direction:column;gap:10px">
@@ -5275,7 +5283,51 @@ function plotWxExplorerChart() {
       `).join('');
     }
   }
+
+  // Update Non-Technical Executive Insight panel
+  const insightTextEl = document.getElementById('wxExecutiveInsightText');
+  if (insightTextEl) {
+    let summaryText = "";
+    const activeProfile = document.getElementById('wxChartProfile').value;
+    
+    // Calculate averages of subset
+    const avgHumid = subset.reduce((acc, r) => acc + (r.relative_humidity_mean_pct || 0), 0) / subset.length;
+    const totalRain = subset.reduce((acc, r) => acc + (r.rainfall_mm || 0), 0);
+    const avgTemp = subset.reduce((acc, r) => acc + (r.temperature_mean_c || r.temperature_2m_mean_c || 28.0), 0) / subset.length;
+    const avgDrying = subset.reduce((acc, r) => acc + (r.drying_potential || 65), 0) / subset.length;
+
+    if (activeProfile === 'moisture') {
+      summaryText = `Over the selected period, this mine experienced an average humidity of <strong>${avgHumid.toFixed(1)}%</strong> and a total rainfall of <strong>${totalRain.toFixed(1)} mm</strong>. `;
+      if (totalRain > 50) {
+        summaryText += `Heavy cumulative rainfall has saturated open-yard coal stockpiles. Consequently, the natural drying speed (Drying Potential) is low (averaging <strong>${avgDrying.toFixed(1)}%</strong>). <span style="color:var(--color-red);font-weight:600">Action: Delay raw coal dispatches or run active blending with drier underground coal grades.</span>`;
+      } else if (avgHumid > 80) {
+        summaryText += `The atmospheric moisture layer is persistently heavy (relative humidity averaging <strong>${avgHumid.toFixed(1)}%</strong>), restricting natural drying potential to <strong>${avgDrying.toFixed(1)}%</strong>. <span style="color:var(--color-orange);font-weight:600">Action: Spread stockpiles in thinner layers on the yard floor to accelerate surface air-drying.</span>`;
+      } else {
+        summaryText += `Weather conditions are generally dry (natural Drying Potential averaging <strong>${avgDrying.toFixed(1)}%</strong>). <span style="color:var(--color-green);font-weight:600">Action: Stockpile conditions are excellent; standard yard operations and direct train loading can proceed safely.</span>`;
+      }
+    } else if (activeProfile === 'thermal') {
+      summaryText = `The average ambient temperature was <strong>${avgTemp.toFixed(1)}°C</strong>. `;
+      if (avgTemp > 35) {
+        summaryText += `High solar heat and hot weather are accelerating natural moisture evaporation from stockpiles, improving GCV. <span style="color:var(--color-green);font-weight:600">Action: Excellent drying environment. Monitor for spontaneous heating/combustion risk in dry coal piles.</span>`;
+      } else if (avgTemp < 20) {
+        summaryText += `Cooler temperatures are slowing down thermodynamic drying speed. Coal will retain surface moisture longer. <span style="color:var(--color-orange);font-weight:600">Action: Extend stockpiling air-drying cycles in the yard before loading dispatches.</span>`;
+      } else {
+        summaryText += `Moderate temperatures are providing stable drying potential. <span style="color:var(--color-green);font-weight:600">Action: Standard stockpiling cycles are recommended.</span>`;
+      }
+    } else {
+      // Atmospheric Profile
+      const avgWind = subset.reduce((acc, r) => acc + (r.wind_speed_mean_kmh || r.wind_speed_10m_max_kmh || 12.0), 0) / subset.length;
+      summaryText = `Average wind speed recorded is <strong>${avgWind.toFixed(1)} km/h</strong>. `;
+      if (avgWind > 25) {
+        summaryText += `High wind speeds are assisting surface drying, but create severe dust carryover risks. <span style="color:var(--color-red);font-weight:600">Action: Activate dust suppression water sprinklers around dry stockpiles.</span>`;
+      } else {
+        summaryText += `Low wind turbulence observed. Air drying speed is normal. <span style="color:var(--color-green);font-weight:600">Action: Proceed with standard open yard operations.</span>`;
+      }
+    }
+    insightTextEl.innerHTML = summaryText;
+  }
 }
+
 // AI PREDICTIONS PAGE
 // ═══════════════════════════════════════════════════════════════════════════
 let _predModelsInfo = [];
