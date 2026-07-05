@@ -1907,6 +1907,85 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
 
 
         </div>
+
+        <!-- Live AWS IoT Telemetry Stream Card -->
+        <div class="card" style="padding:16px 20px;margin-top:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-color);padding-bottom:10px;margin-bottom:14px">
+            <div>
+              <h3 style="font-size:13px;font-weight:700;color:var(--text-primary);display:flex;align-items:center">
+                <span style="display:inline-block;width:7px;height:7px;background:#22c55e;border-radius:50%;margin-right:8px;box-shadow:0 0 8px #22c55e;animation:pulse-blink 1.5s infinite"></span>
+                📡 Live AWS IoT Telemetry Stream
+              </h3>
+              <p style="font-size:10px;color:var(--text-tertiary)">Simulated real-time sensor updates for active stockpile context.</p>
+            </div>
+            <div style="display:flex;gap:12px;font-size:10px;color:var(--text-secondary)">
+              <div>Station Status: <span class="risk-pill low" style="padding:1.5px 5px;font-size:9.5px;text-transform:uppercase">ONLINE</span></div>
+              <div id="liveStreamTime">Last scan: —</div>
+            </div>
+          </div>
+
+          <!-- Real-Time Metrics -->
+          <div class="grid grid-5" style="gap:16px;margin-bottom:14px">
+            <div class="card kpi-card" style="padding:10px 14px;background:rgba(0,0,0,0.015);box-shadow:none;">
+              <div class="kpi-details">
+                <div class="kpi-label" style="font-size:9.5px">Air Temperature</div>
+                <div class="kpi-value" id="liveValTemp" style="font-size:15px;padding:2px 0">—</div>
+                <div class="kpi-delta neutral" style="font-size:9px">2m Elevation Sensor</div>
+              </div>
+            </div>
+            <div class="card kpi-card" style="padding:10px 14px;background:rgba(0,0,0,0.015);box-shadow:none;">
+              <div class="kpi-details">
+                <div class="kpi-label" style="font-size:9.5px">Relative Humidity</div>
+                <div class="kpi-value" id="liveValHumid" style="font-size:15px;padding:2px 0">—</div>
+                <div class="kpi-delta neutral" style="font-size:9px">Capacitive Sensor</div>
+              </div>
+            </div>
+            <div class="card kpi-card" style="padding:10px 14px;background:rgba(0,0,0,0.015);box-shadow:none;">
+              <div class="kpi-details">
+                <div class="kpi-label" style="font-size:9.5px">Wind Speed</div>
+                <div class="kpi-value" id="liveValWind" style="font-size:15px;padding:2px 0">—</div>
+                <div class="kpi-delta neutral" style="font-size:9px">Anemometer Array</div>
+              </div>
+            </div>
+            <div class="card kpi-card" style="padding:10px 14px;background:rgba(0,0,0,0.015);box-shadow:none;">
+              <div class="kpi-details">
+                <div class="kpi-label" style="font-size:9.5px">Solar Radiation</div>
+                <div class="kpi-value" id="liveValSolar" style="font-size:15px;padding:2px 0">—</div>
+                <div class="kpi-delta neutral" style="font-size:9px">Pyranometer Flux</div>
+              </div>
+            </div>
+            <div class="card kpi-card" style="padding:10px 14px;background:rgba(0,0,0,0.015);box-shadow:none;">
+              <div class="kpi-details">
+                <div class="kpi-label" style="font-size:9.5px">Surface Pressure</div>
+                <div class="kpi-value" id="liveValPressure" style="font-size:15px;padding:2px 0">—</div>
+                <div class="kpi-delta neutral" style="font-size:9px">Piezoresistive Sensor</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- History Table Log -->
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;margin-bottom:6px;letter-spacing:0.3px">Scan History (Auto-refresh every 3s)</div>
+            <table class="data-table" style="width:100%;font-size:10.5px">
+              <thead>
+                <tr>
+                  <th style="padding:6px 10px">Scan Timestamp</th>
+                  <th style="padding:6px 10px">Air Temp (°C)</th>
+                  <th style="padding:6px 10px">Humidity (%)</th>
+                  <th style="padding:6px 10px">Wind Speed (km/h)</th>
+                  <th style="padding:6px 10px">Solar Radiation (MJ/m²)</th>
+                  <th style="padding:6px 10px">Surface Pressure (hPa)</th>
+                  <th style="padding:6px 10px">Link Quality</th>
+                </tr>
+              </thead>
+              <tbody id="liveStreamHistory">
+                <tr>
+                  <td colspan="7" style="text-align:center;color:var(--text-disabled);padding:14px">Initial telemetry scan in progress...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div><!-- /page-ai-prediction -->
 
       <!-- ═══════════ PAGE 8: SCENARIO SIMULATOR ═══════════ -->
@@ -3116,6 +3195,13 @@ const PAGE_LINKS = {
 function navigateTo(pageName) {
   const link = PAGE_LINKS[pageName];
   if (!link) return;
+
+  // Stop live IoT telemetry interval unless on the Forecaster page
+  if (pageName !== 'AI Quality Forecaster') {
+    if (typeof stopLiveTelemetryStream === 'function') {
+      stopLiveTelemetryStream();
+    }
+  }
 
   // Set topbar labels
   document.getElementById('pageTitle').textContent = link.title;
@@ -5242,8 +5328,92 @@ function selectPredMine(code, name) {
   document.getElementById('predMineDropdown').style.display = 'none';
 }
 
+let liveTelemetryInterval = null;
+let liveTelemetryHistory = [];
+
+async function startLiveTelemetryStream() {
+  if (liveTelemetryInterval) clearInterval(liveTelemetryInterval);
+  
+  // Reset history
+  liveTelemetryHistory = [];
+  const tbody = document.getElementById('liveStreamHistory');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-disabled);padding:14px">Initial telemetry scan in progress...</td></tr>';
+  }
+
+  // Define scanner function
+  const scan = async () => {
+    let mineCode = document.getElementById('predMineCode') ? document.getElementById('predMineCode').value : '';
+    let date = document.getElementById('predDate') ? document.getElementById('predDate').value : '';
+    
+    if (!mineCode || !date) {
+      mineCode = window.activeMineCode || '8506';
+      date = '2025-09-01';
+    }
+
+    const data = await apiFetch(`/api/environmental/streaming/sensor-updates?mine_code=${mineCode}&date=${date}`);
+    if (!data) return;
+
+    // Update main UI counters
+    if (document.getElementById('liveValTemp')) document.getElementById('liveValTemp').innerHTML = `${data.temperature}<span style="font-size:10px;color:var(--text-tertiary)"> °C</span>`;
+    if (document.getElementById('liveValHumid')) document.getElementById('liveValHumid').innerHTML = `${data.relative_humidity}<span style="font-size:10px;color:var(--text-tertiary)"> %</span>`;
+    if (document.getElementById('liveValWind')) document.getElementById('liveValWind').innerHTML = `${data.wind_speed}<span style="font-size:10px;color:var(--text-tertiary)"> km/h</span>`;
+    if (document.getElementById('liveValSolar')) document.getElementById('liveValSolar').innerHTML = `${data.solar_radiation}<span style="font-size:10px;color:var(--text-tertiary)"> MJ/m²</span>`;
+    if (document.getElementById('liveValPressure')) document.getElementById('liveValPressure').innerHTML = `${data.surface_pressure}<span style="font-size:10px;color:var(--text-tertiary)"> hPa</span>`;
+    
+    if (document.getElementById('liveStreamTime')) {
+      const timeStr = new Date(data.timestamp).toLocaleTimeString();
+      document.getElementById('liveStreamTime').textContent = `Last scan: ${timeStr}`;
+    }
+
+    // Prepend to history log
+    const timestamp = new Date(data.timestamp).toLocaleTimeString();
+    liveTelemetryHistory.unshift({
+      timestamp: timestamp,
+      temperature: data.temperature,
+      humidity: data.relative_humidity,
+      wind_speed: data.wind_speed,
+      solar_radiation: data.solar_radiation,
+      surface_pressure: data.surface_pressure
+    });
+
+    if (liveTelemetryHistory.length > 4) {
+      liveTelemetryHistory.pop();
+    }
+
+    // Render table
+    const tableBody = document.getElementById('liveStreamHistory');
+    if (tableBody) {
+      tableBody.innerHTML = liveTelemetryHistory.map(row => `
+        <tr>
+          <td class="mono" style="padding:6px 10px">${row.timestamp}</td>
+          <td class="mono" style="padding:6px 10px;font-weight:600;color:var(--text-primary)">${row.temperature.toFixed(2)}</td>
+          <td class="mono" style="padding:6px 10px;font-weight:600;color:var(--text-primary)">${row.humidity.toFixed(2)}</td>
+          <td class="mono" style="padding:6px 10px;font-weight:600;color:var(--text-primary)">${row.wind_speed.toFixed(2)}</td>
+          <td class="mono" style="padding:6px 10px;font-weight:600;color:var(--text-primary)">${row.solar_radiation.toFixed(2)}</td>
+          <td class="mono" style="padding:6px 10px;font-weight:600;color:var(--text-primary)">${row.surface_pressure.toFixed(2)}</td>
+          <td style="padding:6px 10px"><span class="risk-pill low" style="padding:1px 5px;font-size:9.5px;text-transform:uppercase">EXCELLENT</span></td>
+        </tr>
+      `).join('');
+    }
+  };
+
+  // Run immediate initial scan, then repeat every 3s
+  await scan();
+  liveTelemetryInterval = setInterval(scan, 3000);
+}
+
+function stopLiveTelemetryStream() {
+  if (liveTelemetryInterval) {
+    clearInterval(liveTelemetryInterval);
+    liveTelemetryInterval = null;
+  }
+}
+
 // Load Model details and history log
 async function initPrediction() {
+  // Start the live IoT telemetry stream
+  startLiveTelemetryStream();
   // Load deployed models info
   const data = await apiFetch('/api/predictions/models');
   if (data && data.models) {
