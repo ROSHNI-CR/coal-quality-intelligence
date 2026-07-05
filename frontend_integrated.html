@@ -486,6 +486,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
         <div class="nav-group-items">
           <div class="nav-item" data-page="Operational Alerts Log"><span class="nav-icon">◌</span> Alerts Log <span class="nav-badge" id="alertsBadge">—</span></div>
           <div class="nav-item" data-page="Reports & Exports Hub"><span class="nav-icon">▤</span> Reports Hub</div>
+          <div class="nav-item" data-page="PPA Penalty & ROI Calculator"><span class="nav-icon">💰</span> PPA Penalty &amp; ROI</div>
         </div>
       </div>
 
@@ -1374,12 +1375,15 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
                   <h3 class="card-title">Weather Timeseries Explorer</h3>
                   <span class="card-subtitle">Analyze historical trends for selected station</span>
                 </div>
-                <!-- Time Range Buttons -->
-                <div style="display:flex;gap:4px" id="wxTimeRangeGroup">
-                  <button class="ei-tab" onclick="switchWxTimeRange(7)" id="wxBtn7">7D</button>
-                  <button class="ei-tab" onclick="switchWxTimeRange(30)" id="wxBtn30">30D</button>
-                  <button class="ei-tab active" onclick="switchWxTimeRange(90)" id="wxBtn90">90D</button>
-                  <button class="ei-tab" onclick="switchWxTimeRange(365)" id="wxBtn365">1Y</button>
+                <!-- Time Range & Export Buttons -->
+                <div style="display:flex;gap:8px;align-items:center">
+                  <div style="display:flex;gap:4px" id="wxTimeRangeGroup">
+                    <button class="ei-tab" onclick="switchWxTimeRange(7)" id="wxBtn7">7D</button>
+                    <button class="ei-tab" onclick="switchWxTimeRange(30)" id="wxBtn30">30D</button>
+                    <button class="ei-tab active" onclick="switchWxTimeRange(90)" id="wxBtn90">90D</button>
+                    <button class="ei-tab" onclick="switchWxTimeRange(365)" id="wxBtn365">1Y</button>
+                  </div>
+                  <button class="dl-btn secondary" style="height:26px;font-size:10.5px;padding:0 8px" onclick="exportWeatherExplorerCSV()">📥 Export CSV</button>
                 </div>
               </div>
             </div>
@@ -1482,8 +1486,9 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
 
           <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;flex:1;min-height:0">
             <div class="card" style="padding:16px;flex:1">
-              <div class="card-header">
-                <h3 class="card-title">Monthly Quality parameters trend</h3>
+              <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-color);padding-bottom:10px;margin-bottom:12px">
+                <h3 class="card-title" style="margin-bottom:0">Monthly Quality parameters trend</h3>
+                <button class="dl-btn secondary" style="height:26px;font-size:10.5px;padding:0 8px" onclick="exportCoalQualityCSV()">📥 Export CSV</button>
               </div>
               <div style="flex:1;position:relative;min-height:160px;margin-top:10px">
                 <canvas id="cqGCVChart"></canvas>
@@ -1906,6 +1911,83 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
                   </select>
                 </div>
 
+                <!-- PPA Grade Penalty & ROI Calculator Card -->
+                <div class="card" style="padding:16px;margin-top:20px">
+                  <div class="card-header" style="border-bottom:1px solid var(--border-color);padding-bottom:10px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                      <h3 class="card-title" style="color:var(--color-blue)">💰 PPA Grade Penalty &amp; ROI Calculator</h3>
+                      <span class="card-subtitle">Quantify the financial impact of GCV deviation and evaluate AI mitigation savings.</span>
+                    </div>
+                    <div style="font-size:10px;color:var(--text-secondary)">
+                      Contract Type: <strong style="color:var(--text-primary)">Power Purchase Agreement (PPA)</strong>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-4" style="gap:14px;margin-bottom:16px">
+                    <div>
+                      <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Contract Grade GCV</label>
+                      <div style="position:relative;margin-top:4px">
+                        <input id="calcContractGcv" type="number" value="4600" oninput="runPpaCalculator()" style="width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 10px;font-size:11.5px;outline:none">
+                        <span style="position:absolute;right:8px;top:6px;font-size:9.5px;color:var(--text-tertiary)">kcal/kg</span>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Shipment Tonnage</label>
+                      <div style="position:relative;margin-top:4px">
+                        <input id="calcTonnage" type="number" value="3500" oninput="runPpaCalculator()" style="width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 10px;font-size:11.5px;outline:none">
+                        <span style="position:absolute;right:8px;top:6px;font-size:9.5px;color:var(--text-tertiary)">tons</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Base Coal Price</label>
+                      <div style="position:relative;margin-top:4px">
+                        <input id="calcPrice" type="number" value="1400" oninput="runPpaCalculator()" style="width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 10px;font-size:11.5px;outline:none">
+                        <span style="position:absolute;right:8px;top:6px;font-size:9.5px;color:var(--text-tertiary)">INR/ton</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Slippage Penalty Rate</label>
+                      <div style="position:relative;margin-top:4px">
+                        <input id="calcPenaltyRate" type="number" value="1.50" step="0.1" oninput="runPpaCalculator()" style="width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 10px;font-size:11.5px;outline:none">
+                        <span style="position:absolute;right:8px;top:6px;font-size:9.5px;color:var(--text-tertiary)">INR/kcal</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-3" style="gap:16px;background:rgba(0,0,0,0.015);border:1px solid var(--border-color);padding:14px;margin-bottom:14px">
+                    <div style="text-align:center;border-right:1px dashed var(--border-color)">
+                      <div style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase">GCV Deviation</div>
+                      <div id="calcGcvDeviation" style="font-size:18px;font-weight:700;margin-top:4px;color:var(--text-primary)">—</div>
+                      <div style="font-size:9.5px;color:var(--text-tertiary);margin-top:2px" id="calcGcvDeviationLabel">Against Contract Base</div>
+                    </div>
+                    
+                    <div style="text-align:center;border-right:1px dashed var(--border-color)">
+                      <div style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase">Estimated Penalty</div>
+                      <div id="calcPenaltyValue" style="font-size:18px;font-weight:700;margin-top:4px;color:var(--color-red)">—</div>
+                      <div style="font-size:9.5px;color:var(--text-tertiary);margin-top:2px">Slippage Loss Exposure</div>
+                    </div>
+
+                    <div style="text-align:center">
+                      <div style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase">AI Mitigation ROI</div>
+                      <div id="calcRoiValue" style="font-size:18px;font-weight:700;margin-top:4px;color:var(--color-green)">—</div>
+                      <div style="font-size:9.5px;color:var(--text-tertiary);margin-top:2px">Financial Loss Avoided</div>
+                    </div>
+                  </div>
+
+                  <!-- Mitigation Trigger Checkbox -->
+                  <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(34,197,94,0.03);border:1px solid rgba(34,197,94,0.2);padding:10px 14px">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <input type="checkbox" id="calcMitigationChecked" onchange="runPpaCalculator()" checked style="width:14px;height:14px;cursor:pointer">
+                      <label for="calcMitigationChecked" style="font-size:11.5px;color:var(--text-primary);font-weight:600;cursor:pointer">
+                        Apply Predicted Mitigation Action (Air-Drying &amp; Coal Blending runs)
+                      </label>
+                    </div>
+                    <span style="font-size:10px;color:var(--color-green);font-weight:700">✓ Action Brief Deployed</span>
+                  </div>
+                </div>
 
               </div>
 
@@ -2196,6 +2278,166 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
 
         </div>
       </div><!-- /page-settings -->
+
+      <!-- ═══════════ PAGE 13: PPA GRADE PENALTY CALCULATOR ═══════════ -->
+      <div id="page-ppa-calculator" class="page-content">
+        <div class="grid grid-10" style="align-content:start">
+          
+          <!-- LEFT PANEL: Simulation parameters -->
+          <div class="card col-3" style="padding:18px;gap:14px;display:flex;flex-direction:column">
+            <div style="border-bottom:1px solid var(--border-color);padding-bottom:8px">
+              <h3 style="font-size:13px;font-weight:700;color:var(--text-primary)">PPA Pricing Inputs</h3>
+              <p style="font-size:10px;color:var(--text-tertiary)">Select target mine and contract variables.</p>
+            </div>
+
+            <!-- Autocomplete Mine Search -->
+            <div style="position:relative">
+              <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Target Mine</label>
+              <div class="search-wrapper" style="margin-top:4px;height:32px">
+                <input type="text" id="calcMineSearch" placeholder="Type mine name or code..." autocomplete="off" oninput="onCalcMineSearch(this.value)">
+                <input type="hidden" id="calcMineCode">
+              </div>
+              <div id="calcMineDropdown" class="search-dropdown" style="top:calc(100% + 4px);max-height:200px"></div>
+            </div>
+
+            <!-- Date Picker -->
+            <div>
+              <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Shipment Date</label>
+              <input id="calcDate" type="date" value="2025-09-01" onchange="loadPpaPredictedGcv()"
+                style="display:block;width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:7px 10px;border-radius:var(--radius-md);font-size:12px;margin-top:4px;outline:none">
+            </div>
+
+            <!-- Active GCV (Read-only or loaded automatically) -->
+            <div>
+              <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">AI Predicted GCV</label>
+              <div style="position:relative;margin-top:4px">
+                <input id="calcPredictGcv" type="number" value="4480" oninput="runPpaDedicatedCalculator()" style="width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 10px;font-size:11.5px;outline:none;font-weight:700">
+                <span style="position:absolute;right:8px;top:6px;font-size:9.5px;color:var(--text-tertiary)">kcal/kg</span>
+              </div>
+              <p style="font-size:9.5px;color:var(--text-tertiary);margin-top:4px" id="calcPredictGcvStatus">Using active model prediction baseline.</p>
+            </div>
+
+            <div style="border-top:1px solid var(--border-color);padding-top:10px;display:flex;flex-direction:column;gap:12px">
+              <div>
+                <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Contract Grade GCV</label>
+                <div style="position:relative;margin-top:4px">
+                  <input id="calcContractGcvDed" type="number" value="4600" oninput="runPpaDedicatedCalculator()" style="width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 10px;font-size:11.5px;outline:none">
+                  <span style="position:absolute;right:8px;top:6px;font-size:9.5px;color:var(--text-tertiary)">kcal/kg</span>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Dispatch Tonnage</label>
+                <div style="position:relative;margin-top:4px">
+                  <input id="calcTonnageDed" type="number" value="3500" oninput="runPpaDedicatedCalculator()" style="width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 10px;font-size:11.5px;outline:none">
+                  <span style="position:absolute;right:8px;top:6px;font-size:9.5px;color:var(--text-tertiary)">tons</span>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Base Coal Price</label>
+                <div style="position:relative;margin-top:4px">
+                  <input id="calcPriceDed" type="number" value="1400" oninput="runPpaDedicatedCalculator()" style="width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 10px;font-size:11.5px;outline:none">
+                  <span style="position:absolute;right:8px;top:6px;font-size:9.5px;color:var(--text-tertiary)">INR/ton</span>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Slippage Penalty Rate</label>
+                <div style="position:relative;margin-top:4px">
+                  <input id="calcPenaltyRateDed" type="number" value="1.50" step="0.10" oninput="runPpaDedicatedCalculator()" style="width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 10px;font-size:11.5px;outline:none">
+                  <span style="position:absolute;right:8px;top:6px;font-size:9.5px;color:var(--text-tertiary)">INR/kcal</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT PANEL: Financial Quality Ledger -->
+          <div class="col-7" style="display:flex;flex-direction:column;gap:20px">
+            
+            <!-- Financial Summary KPI Row -->
+            <div class="grid grid-3" style="gap:16px">
+              <div class="card kpi-card" style="background:linear-gradient(135deg, rgba(239,68,68,0.06), rgba(255, 255, 255, 0.95))">
+                <div class="kpi-icon-wrap risk">⚖</div>
+                <div class="kpi-details">
+                  <div class="kpi-label">GCV Deviation</div>
+                  <div class="kpi-value" id="calcGcvDeviationDed">—</div>
+                  <div class="kpi-delta neutral" id="calcGcvDeviationLabelDed">Against Contract specifications</div>
+                </div>
+              </div>
+
+              <div class="card kpi-card" style="background:linear-gradient(135deg, rgba(239,68,68,0.06), rgba(255, 255, 255, 0.95));border-color:rgba(239,68,68,0.2)">
+                <div class="kpi-icon-wrap risk">💸</div>
+                <div class="kpi-details">
+                  <div class="kpi-label">Slippage Penalty Exposure</div>
+                  <div class="kpi-value" id="calcPenaltyValueDed" style="color:var(--color-red)">—</div>
+                  <div class="kpi-delta neutral">Estimated write-off risk</div>
+                </div>
+              </div>
+
+              <div class="card kpi-card" style="background:linear-gradient(135deg, rgba(22,163,74,0.06), rgba(255, 255, 255, 0.95));border-color:rgba(22,163,74,0.25)">
+                <div class="kpi-icon-wrap gcv">🛡</div>
+                <div class="kpi-details">
+                  <div class="kpi-label">AI Mitigation ROI Savings</div>
+                  <div class="kpi-value" id="calcRoiValueDed" style="color:var(--color-green)">—</div>
+                  <div class="kpi-delta neutral">Loss avoided through blending</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ledger Details -->
+            <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:14px">
+              <div class="card-header" style="border-bottom:1px solid var(--border-color);padding-bottom:10px;margin-bottom:6px">
+                <h3 class="card-title">Commercial Dispatch Audit sheet</h3>
+                <span class="card-subtitle">Detailed breakdown of PPA pricing adjustments</span>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:10px;font-size:12px;color:var(--text-secondary)">
+                <div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.04);padding-bottom:6px">
+                  <span>Gross Contract Dispatch Value</span>
+                  <span id="auditBasePrice" style="font-weight:600;color:var(--text-primary)">—</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.04);padding-bottom:6px">
+                  <span>Adjusted Dispatch Value (GCV Deficit Applied)</span>
+                  <span id="auditAdjustedPrice" style="font-weight:600;color:var(--color-red)">—</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.04);padding-bottom:6px">
+                  <span>Slippage Percentage of Base Price</span>
+                  <span id="auditSlippagePct" style="font-weight:600;color:var(--color-red)">—</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.04);padding-bottom:6px">
+                  <span>ROI Savings Saved by Blending Action</span>
+                  <span id="auditSavings" style="font-weight:600;color:var(--color-green)">—</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mitigation Panel Toggle -->
+            <div class="card" style="padding:16px;background:rgba(34,197,94,0.03);border:1px solid rgba(34,197,94,0.25)">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div>
+                  <strong style="font-size:12px;color:var(--text-primary);display:block;margin-bottom:2px">Deploy Smart Blending &amp; Drying mitigation protocols</strong>
+                  <span style="font-size:10.5px;color:var(--text-secondary)">Restores stockpile GCV to contract base quality via target blending.</span>
+                </div>
+                <input type="checkbox" id="calcMitigationCheckedDed" onchange="runPpaDedicatedCalculator()" checked style="width:16px;height:16px;cursor:pointer">
+              </div>
+            </div>
+
+            <!-- Informational Panel: PPA Coal Grading Rules -->
+            <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:8px">
+              <strong style="font-size:12px;color:var(--color-blue)">PPA Coal Grading and Grade Slippage Rules:</strong>
+              <p style="font-size:10.5px;color:var(--text-secondary);line-height:1.45;margin:0">
+                Under the standard **Power Purchase Agreements (PPAs)** signed by Coal India Limited (CIL) subsidiaries, coal is priced based on **Declared GCV Bands** (e.g., G8, G9, G10).
+                If the loaded coal at the dispatch siding falls below the contracted band's lower limit, it triggers a **Grade Slippage Clause**.
+                This forces the mine to bill the shipment at the lower grade price, resulting in direct revenue losses.
+                By forecasting rainfall-driven moisture spikes 48 hours in advance, yard managers can blend high-moisture stockpiles with dry reserve grades to safeguard contract compliance.
+              </p>
+            </div>
+            
+          </div>
+
+        </div>
+      </div><!-- /page-ppa-calculator -->
 
     </div><!-- /page-container -->
   </div><!-- /workspace -->
@@ -3174,7 +3416,18 @@ function navigateToContext(pageName) {
       setTimeout(() => {
         runPredictionWorkspace();
       }, 120);
-
+    } else if (pageName === 'PPA Penalty & ROI Calculator') {
+      setTimeout(() => {
+        const searchInput = document.getElementById('predMineSearch');
+        const mineName = searchInput && searchInput.value ? searchInput.value.split(' (')[0] : 'PIPARIYA UG';
+        selectCalcMine(window.activeMineCode, mineName);
+      }, 120);
+    }
+  } else {
+    if (pageName === 'PPA Penalty & ROI Calculator') {
+      setTimeout(() => {
+        selectCalcMine('8506', 'PIPARIYA UG');
+      }, 120);
     }
   }
 }
@@ -3183,7 +3436,8 @@ function navigateToContext(pageName) {
 const PAGES = [
   'Executive Overview', 'Operational Risk Map', 'Mine Registry & Profiler', 'Environmental Monitoring', 
   'Quality Analytics & Trends', 'Environmental Insights', 'AI Quality Forecaster', 
-  'What-If Quality Simulator', 'Operational Alerts Log', 'Reports & Exports Hub', 'System Status'
+  'What-If Quality Simulator', 'Operational Alerts Log', 'Reports & Exports Hub', 'System Status',
+  'PPA Penalty & ROI Calculator'
 ];
 
 const PAGE_LINKS = {
@@ -3197,7 +3451,8 @@ const PAGE_LINKS = {
   'What-If Quality Simulator': { id: 'page-scenario-simulator', title: 'What-If Quality Simulator', subtitle: 'BQ: What happens if weather conditions shift? · OD: Simulate blending actions ahead of heavy rainfall to protect GCV.' },
   'Operational Alerts Log': { id: 'page-alerts', title: 'Operational Alerts Log', subtitle: 'BQ: What warnings need immediate attention? · OD: Dispatch corrective yard and washing runs for active alerts.' },
   'Reports & Exports Hub': { id: 'page-reports', title: 'Reports & Exports Hub', subtitle: 'BQ: What summary reports do I need to share? · OD: Export audit sheets and backtesting logs to regulatory bodies.' },
-  'System Status': { id: 'page-settings', title: 'System Status', subtitle: 'BQ: Are prediction models and databases healthy? · OD: Re-deploy underperforming ML models or restart synchronization servers.' }
+  'System Status': { id: 'page-settings', title: 'System Status', subtitle: 'BQ: Are prediction models and databases healthy? · OD: Re-deploy underperforming ML models or restart synchronization servers.' },
+  'PPA Penalty & ROI Calculator': { id: 'page-ppa-calculator', title: 'PPA Grade Penalty & ROI Calculator', subtitle: 'BQ: What is the financial risk exposure of our dispatch quality? · OD: Optimize coal blending schedules to minimize grade slippage penalty write-offs.' }
 };
 
 function navigateTo(pageName) {
@@ -4440,6 +4695,7 @@ async function initCoalQuality() {
   }
 
   if (trend && trend.monthly_gcv) {
+    window.coalQualityTrendData = trend.monthly_gcv;
     const months = trend.monthly_gcv;
     const labels = months.map(m => m.month.slice(0, 7));
     const vals = months.map(m => m.avg_gcv);
@@ -5469,6 +5725,17 @@ async function startLiveTelemetryStream() {
     const data = await apiFetch(`/api/environmental/streaming/sensor-updates?mine_code=${mineCode}&date=${date}`);
     if (!data) return;
 
+    // Trigger on-screen toast push notification with alert chimes if weather thresholds are exceeded
+    if (data.relative_humidity > 82.0) {
+      if (typeof showToastNotification === 'function') {
+        showToastNotification("🚨 High Moisture Alert!", `Capacitive sensor detected high humidity of ${data.relative_humidity}% at Mine ${mineCode}. Evaporation drying rate is restricted.`, "high");
+      }
+    } else if (data.wind_speed > 13.5) {
+      if (typeof showToastNotification === 'function') {
+        showToastNotification("💨 Wind Dust Warning!", `Anemometer array recorded wind speed of ${data.wind_speed} km/h. Recommend turning on yard dust suppressors.`, "medium");
+      }
+    }
+
     // Update main UI counters
     if (document.getElementById('liveValTemp')) document.getElementById('liveValTemp').innerHTML = `${data.temperature}<span style="font-size:10px;color:var(--text-tertiary)"> °C</span>`;
     if (document.getElementById('liveValHumid')) document.getElementById('liveValHumid').innerHTML = `${data.relative_humidity}<span style="font-size:10px;color:var(--text-tertiary)"> %</span>`;
@@ -5522,6 +5789,297 @@ function stopLiveTelemetryStream() {
   if (liveTelemetryInterval) {
     clearInterval(liveTelemetryInterval);
     liveTelemetryInterval = null;
+  }
+}
+
+// ── ADVANCED DASHBOARD ENHANCEMENTS (PPA Calculator, Audio Chimes, CSV Exporter) ──
+function showToastNotification(title, message, severity = 'medium') {
+  const existing = document.getElementById('floatingToast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'floatingToast';
+  toast.style = 'position:fixed;top:20px;right:20px;background:var(--bg-card);border:1px solid var(--border-color);border-left:4px solid var(--color-blue);width:340px;padding:12px 16px;box-shadow:var(--shadow-premium);z-index:999999;display:flex;flex-direction:column;gap:4px;animation:slide-in-right 0.3s ease-out;';
+  
+  if (severity === 'high') {
+    toast.style.borderLeftColor = 'var(--color-red)';
+  } else if (severity === 'low') {
+    toast.style.borderLeftColor = 'var(--color-green)';
+  } else {
+    toast.style.borderLeftColor = 'var(--color-amber)';
+  }
+
+  toast.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-weight:700;font-size:11.5px;color:var(--text-primary)">${title}</span>
+      <button onclick="document.getElementById('floatingToast').remove()" style="background:none;border:none;color:var(--text-tertiary);cursor:pointer;font-size:12px;font-weight:700">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--text-secondary);line-height:1.4">${message}</div>
+  `;
+  document.body.appendChild(toast);
+
+  // Play Web Audio Chime Sound!
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    
+    if (severity === 'high') {
+      osc.frequency.value = 523.25; // C5 pitch
+      gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.12);
+      
+      setTimeout(() => {
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = 'sine';
+        osc2.frequency.value = 440; // A4 alarm
+        gain2.gain.setValueAtTime(0.04, audioCtx.currentTime);
+        osc2.start();
+        osc2.stop(audioCtx.currentTime + 0.2);
+      }, 140);
+    } else {
+      osc.frequency.value = 880; // A5 pitch
+      gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.1);
+    }
+  } catch (e) {
+    console.error('Audio chime blocked or not supported:', e);
+  }
+
+  // Auto remove toast after 6 seconds
+  setTimeout(() => {
+    const activeToast = document.getElementById('floatingToast');
+    if (activeToast) activeToast.remove();
+  }, 6000);
+}
+
+function downloadCSV(filename, headers, rows) {
+  let csvContent = headers.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function exportWeatherExplorerCSV() {
+  if (!_currentWxTimeseriesData || !_currentWxTimeseriesData.length) {
+    alert("No weather dataset loaded to export!");
+    return;
+  }
+  const headers = ["Date", "Temperature (C)", "Relative Humidity (%)", "Rainfall (mm)", "Solar Radiation (MJ)", "Surface Pressure (hPa)", "Wind Speed (km/h)", "Drying Potential"];
+  const rows = _currentWxTimeseriesData.map(r => {
+    const temp = typeof r.temperature_mean_c !== 'undefined' ? r.temperature_mean_c : (r.temperature_2m_mean_c || 25.0);
+    const humid = r.relative_humidity_mean_pct || r.relative_humidity_mean || 65;
+    const rain = typeof r.rainfall_mm !== 'undefined' ? r.rainfall_mm : (r.precipitation_sum_mm || 0.0);
+    const solar = typeof r.solar_radiation_mj_m2 !== 'undefined' ? r.solar_radiation_mj_m2 : (r.solar_radiation_sum_mj || 15.0);
+    const pressure = r.surface_pressure_mean_hpa || 1008.0;
+    const wind = typeof r.wind_speed_mean_kmh !== 'undefined' ? r.wind_speed_mean_kmh : (r.wind_speed_10m_max_kmh || 12.0);
+    const drying = typeof r.drying_potential !== 'undefined' ? r.drying_potential : (r.drying_potential_index || 60.0);
+    
+    return [
+      r.date,
+      temp.toFixed(2),
+      humid.toFixed(2),
+      rain.toFixed(2),
+      solar.toFixed(2),
+      pressure.toFixed(2),
+      wind.toFixed(2),
+      drying.toFixed(2)
+    ];
+  });
+  downloadCSV("weather_station_trends_export.csv", headers, rows);
+  showToastNotification("📥 CSV Exported!", "Weather Station Timeseries dataset downloaded successfully.", "low");
+}
+
+function exportCoalQualityCSV() {
+  if (!window.coalQualityTrendData || !window.coalQualityTrendData.length) {
+    alert("No trend data loaded to export!");
+    return;
+  }
+  const headers = ["Month", "Average GCV (kcal/kg)", "Min GCV", "Max GCV", "Average Moisture (%)", "Average Ash (%)", "Sample Count"];
+  const rows = window.coalQualityTrendData.map(m => [
+    m.month,
+    m.avg_gcv || '—',
+    m.min_gcv || '—',
+    m.max_gcv || '—',
+    m.avg_moisture || '—',
+    m.avg_ash || '—',
+    m.sample_count || 0
+  ]);
+  downloadCSV("coal_quality_trends_export.csv", headers, rows);
+  showToastNotification("📥 CSV Exported!", "Historical Coal Quality Trend data downloaded successfully.", "low");
+}
+
+// Dedicated PPA Calculator Mine Autocomplete
+async function onCalcMineSearch(query) {
+  const dropdown = document.getElementById('calcMineDropdown');
+  if (!dropdown) return;
+  if (!query) { dropdown.style.display = 'none'; return; }
+  
+  const res = await apiFetch(`/api/analytics/mines/gis-layer`);
+  if (!res || !res.mines) return;
+  
+  const matches = res.mines.filter(m => 
+    m.name.toLowerCase().includes(query.toLowerCase()) || 
+    m.mine_code.toString().includes(query)
+  ).slice(0, 8);
+
+  if (!matches.length) {
+    dropdown.style.display = 'none';
+    return;
+  }
+
+  dropdown.innerHTML = matches.map(m => `
+    <div onclick="selectCalcMine(${m.mine_code}, '${m.name.replace(/'/g, "\\'")}')" style="padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--border-color)">
+      <strong>${m.name}</strong> <span style="font-size:9.5px;color:var(--text-tertiary)">(${m.subsidiary})</span>
+    </div>
+  `).join('');
+  dropdown.style.display = 'block';
+}
+
+function selectCalcMine(code, name) {
+  document.getElementById('calcMineCode').value = code;
+  document.getElementById('calcMineSearch').value = `${name} (${code})`;
+  document.getElementById('calcMineDropdown').style.display = 'none';
+  
+  loadPpaPredictedGcv();
+}
+
+async function loadPpaPredictedGcv() {
+  const code = document.getElementById('calcMineCode').value;
+  const date = document.getElementById('calcDate').value;
+  const statusEl = document.getElementById('calcPredictGcvStatus');
+  if (!code || !date) return;
+  
+  statusEl.textContent = "Fetching active AI predictions...";
+  statusEl.style.color = "var(--color-blue)";
+  
+  const predData = await apiFetch(`/api/predictions/${code}/all?date=${date}&log=false`);
+  if (predData && predData.gcv && predData.gcv.point_estimate != null) {
+    const val = predData.gcv.point_estimate;
+    document.getElementById('calcPredictGcv').value = val.toFixed(0);
+    statusEl.textContent = `✓ Successfully loaded prediction for ${date}.`;
+    statusEl.style.color = "var(--color-green)";
+  } else {
+    const randGcv = 4400 + Math.floor(Math.random() * 300);
+    document.getElementById('calcPredictGcv').value = randGcv;
+    statusEl.textContent = `⚠ Prediction data unavailable for this date. Using simulated baseline.`;
+    statusEl.style.color = "var(--color-amber)";
+  }
+  
+  runPpaDedicatedCalculator();
+}
+
+function runPpaDedicatedCalculator() {
+  const aiGcvVal = parseFloat(document.getElementById('calcPredictGcv').value) || 4480;
+  const contractGcv = parseFloat(document.getElementById('calcContractGcvDed').value) || 4600;
+  const tonnage = parseFloat(document.getElementById('calcTonnageDed').value) || 3500;
+  const price = parseFloat(document.getElementById('calcPriceDed').value) || 1400;
+  const penaltyRate = parseFloat(document.getElementById('calcPenaltyRateDed').value) || 1.50;
+  const isMitigated = document.getElementById('calcMitigationCheckedDed').checked;
+
+  const deviation = aiGcvVal - contractGcv;
+  const devEl = document.getElementById('calcGcvDeviationDed');
+  const devLbl = document.getElementById('calcGcvDeviationLabelDed');
+  
+  if (deviation >= 0) {
+    devEl.textContent = `+${deviation.toFixed(0)} kcal`;
+    devEl.style.color = 'var(--color-green)';
+    devLbl.textContent = 'GCV Surplus (Within Contract Specs)';
+  } else {
+    devEl.textContent = `${deviation.toFixed(0)} kcal`;
+    devEl.style.color = 'var(--color-red)';
+    devLbl.textContent = 'GCV Deficit (Grade Slippage Risk)';
+  }
+
+  const penaltyExposure = deviation >= 0 ? 0.0 : Math.abs(deviation) * penaltyRate * tonnage;
+  const penaltyValEl = document.getElementById('calcPenaltyValueDed');
+  
+  if (penaltyExposure === 0) {
+    penaltyValEl.textContent = 'INR 0';
+    penaltyValEl.style.color = 'var(--text-primary)';
+  } else {
+    penaltyValEl.textContent = `INR ${Number(penaltyExposure.toFixed(0)).toLocaleString()}`;
+    penaltyValEl.style.color = 'var(--color-red)';
+  }
+
+  const roiValEl = document.getElementById('calcRoiValueDed');
+  if (isMitigated && penaltyExposure > 0) {
+    roiValEl.textContent = `INR ${Number(penaltyExposure.toFixed(0)).toLocaleString()}`;
+    roiValEl.style.color = 'var(--color-green)';
+  } else {
+    roiValEl.textContent = 'INR 0';
+    roiValEl.style.color = 'var(--text-tertiary)';
+  }
+
+  const grossContractVal = tonnage * price;
+  const netDispatchVal = grossContractVal - penaltyExposure;
+  const slippagePct = grossContractVal > 0 ? (penaltyExposure / grossContractVal * 100) : 0.0;
+  const savedVal = isMitigated ? penaltyExposure : 0.0;
+
+  document.getElementById('auditBasePrice').textContent = `INR ${Number(grossContractVal.toFixed(0)).toLocaleString()}`;
+  document.getElementById('auditAdjustedPrice').textContent = `INR ${Number(netDispatchVal.toFixed(0)).toLocaleString()}`;
+  document.getElementById('auditSlippagePct').textContent = `${slippagePct.toFixed(2)} %`;
+  document.getElementById('auditSavings').textContent = `INR ${Number(savedVal.toFixed(0)).toLocaleString()}`;
+}
+
+function runPpaCalculator() {
+  if (!currentWorkspacePredictions) return;
+  const p = currentWorkspacePredictions.gcv;
+  if (!p) return;
+
+  const aiGcvVal = p.point_estimate;
+  if (aiGcvVal == null) return;
+
+  const contractGcv = parseFloat(document.getElementById('calcContractGcv').value) || 4600;
+  const tonnage = parseFloat(document.getElementById('calcTonnage').value) || 3500;
+  const penaltyRate = parseFloat(document.getElementById('calcPenaltyRate').value) || 1.50;
+  const isMitigated = document.getElementById('calcMitigationChecked').checked;
+
+  const deviation = aiGcvVal - contractGcv;
+  const devEl = document.getElementById('calcGcvDeviation');
+  const devLbl = document.getElementById('calcGcvDeviationLabel');
+  
+  if (deviation >= 0) {
+    devEl.textContent = `+${deviation.toFixed(0)} kcal`;
+    devEl.style.color = 'var(--color-green)';
+    devLbl.textContent = 'GCV Surplus';
+  } else {
+    devEl.textContent = `${deviation.toFixed(0)} kcal`;
+    devEl.style.color = 'var(--color-red)';
+    devLbl.textContent = 'GCV Deficit';
+  }
+
+  const penaltyExposure = deviation >= 0 ? 0.0 : Math.abs(deviation) * penaltyRate * tonnage;
+  const penaltyValEl = document.getElementById('calcPenaltyValue');
+  
+  if (penaltyExposure === 0) {
+    penaltyValEl.textContent = 'INR 0';
+    penaltyValEl.style.color = 'var(--text-primary)';
+  } else {
+    penaltyValEl.textContent = `INR ${Number(penaltyExposure.toFixed(0)).toLocaleString()}`;
+    penaltyValEl.style.color = 'var(--color-red)';
+  }
+
+  const roiValEl = document.getElementById('calcRoiValue');
+  if (isMitigated && penaltyExposure > 0) {
+    roiValEl.textContent = `INR ${Number(penaltyExposure.toFixed(0)).toLocaleString()}`;
+    roiValEl.style.color = 'var(--color-green)';
+  } else {
+    roiValEl.textContent = 'INR 0';
+    roiValEl.style.color = 'var(--text-tertiary)';
   }
 }
 
@@ -5849,6 +6407,11 @@ async function loadPredictionWorkspaceTab(target) {
     recText.textContent = isWet 
       ? 'Rainfall accumulations indicate elevated stockpile water retention. Sampling may be delayed by 2–3 days for natural drying.'
       : 'Expected moisture reduction due to high drying potential. Air drying rates are optimal. Proceed with standard sampling runs.';
+  }
+
+  // Trigger PPA calculator update if the card exists
+  if (typeof runPpaCalculator === 'function') {
+    runPpaCalculator();
   }
 }
 
