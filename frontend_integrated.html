@@ -3485,6 +3485,13 @@ function navigateTo(pageName) {
     setTimeout(() => {
       if (_leafletMapGIS) _leafletMapGIS.invalidateSize();
     }, 150);
+  } else if (pageName === 'PPA Penalty & ROI Calculator') {
+    setTimeout(() => {
+      const code = window.activeMineCode || '8506';
+      const searchInput = document.getElementById('predMineSearch');
+      const name = searchInput && searchInput.value ? searchInput.value.split(' (')[0] : 'PIPARIYA UG';
+      selectCalcMine(code, name);
+    }, 120);
   }
   
   initPage(link.id.replace('page-', ''));
