@@ -6042,6 +6042,121 @@ async function initSettings() {
 // ═══════════════════════════════════════════════════════════════════════════
 window.isLiveWeatherActive = false;
 
+function showLiveForecastSummaryModal(mineName, forecastData) {
+  const existing = document.getElementById('liveForecastModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'liveForecastModal';
+  modal.style = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(5,21,15,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+  
+  const avgHumid = forecastData.reduce((acc, r) => acc + (r.relative_humidity_mean_pct || r.relative_humidity_mean || 65), 0) / forecastData.length;
+  const totalRain = forecastData.reduce((acc, r) => acc + (r.precipitation_sum_mm || r.rainfall_mm || 0), 0);
+  const maxRainDay = forecastData.reduce((max, r) => (r.precipitation_sum_mm || r.rainfall_mm || 0) > (max.precipitation_sum_mm || max.rainfall_mm || 0) ? r : max, forecastData[0]);
+  const avgTemp = forecastData.reduce((acc, r) => acc + (r.temperature_2m_mean_c || r.temperature_mean_c || 28.0), 0) / forecastData.length;
+  
+  let riskLevel = "LOW RISK";
+  let riskClass = "low";
+  let actionText = "Yard conditions are optimal. Standard train loading operations can proceed without delays.";
+  if (totalRain > 15) {
+    riskLevel = "HIGH RISK (Rainfall)";
+    riskClass = "high";
+    const rainVal = maxRainDay.precipitation_sum_mm || maxRainDay.rainfall_mm || 0;
+    actionText = `Heavy rain up to ${rainVal.toFixed(1)}mm is expected on ${maxRainDay.date.slice(5)}. Pre-emptively run coal yard drainage pumps and cover active moisture-sensitive stockpiles.`;
+  } else if (avgHumid > 75) {
+    riskLevel = "MEDIUM RISK (Humidity)";
+    riskClass = "medium";
+    actionText = "High ambient humidity will slow down natural convective drying. Spread coal in thin layers to assist evaporation.";
+  }
+
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:0px;width:520px;padding:24px;box-shadow:var(--shadow-premium);position:relative">
+      <button onclick="closeLiveForecastModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text-tertiary);font-size:18px;cursor:pointer;font-weight:700">✕</button>
+      
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border-bottom:1px solid var(--border-color);padding-bottom:10px">
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--color-blue);text-transform:uppercase;letter-spacing:1.5px">AWS Smart Telemetry</div>
+          <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin-top:2px">7-Day Live Weather Forecast Summary</h3>
+        </div>
+        <span class="risk-pill ${riskClass}" style="font-size:10px;padding:3px 8px;font-weight:700;letter-spacing:0.5px">${riskLevel}</span>
+      </div>
+      
+      <div style="font-size:11px;color:var(--text-secondary);margin-bottom:14px">
+        Target Station: <strong style="color:var(--text-primary)">${mineName} AWS Link</strong><br>
+        Forecast Horizon: <span style="font-weight:600">${forecastData[0].date} to ${forecastData[forecastData.length - 1].date}</span>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="grid grid-3" style="gap:10px;margin-bottom:18px">
+        <div style="background:var(--bg-input);border:1px solid var(--border-color);padding:8px 12px;border-radius:0px;text-align:center">
+          <div style="font-size:9px;color:var(--text-tertiary);text-transform:uppercase">Avg Temperature</div>
+          <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-top:2px">${avgTemp.toFixed(1)} °C</div>
+        </div>
+        <div style="background:var(--bg-input);border:1px solid var(--border-color);padding:8px 12px;border-radius:0px;text-align:center">
+          <div style="font-size:9px;color:var(--text-tertiary);text-transform:uppercase">Total Rainfall</div>
+          <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-top:2px">${totalRain.toFixed(1)} mm</div>
+        </div>
+        <div style="background:var(--bg-input);border:1px solid var(--border-color);padding:8px 12px;border-radius:0px;text-align:center">
+          <div style="font-size:9px;color:var(--text-tertiary);text-transform:uppercase">Avg Humidity</div>
+          <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-top:2px">${avgHumid.toFixed(1)} %</div>
+        </div>
+      </div>
+
+      <!-- Forecast Table -->
+      <div style="margin-bottom:18px">
+        <div style="font-size:10px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;margin-bottom:6px">Daily Weather Outlook</div>
+        <div style="max-height:160px;overflow-y:auto;border:1px solid var(--border-color)">
+          <table class="data-table" style="width:100%;font-size:10.5px">
+            <thead>
+              <tr>
+                <th style="padding:4px 8px">Date</th>
+                <th style="padding:4px 8px">Temp (°C)</th>
+                <th style="padding:4px 8px">Humidity (%)</th>
+                <th style="padding:4px 8px">Rain (mm)</th>
+                <th style="padding:4px 8px">Outlook</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${forecastData.map(d => {
+                const temp = d.temperature_2m_mean_c || d.temperature_mean_c || 28.0;
+                const humid = d.relative_humidity_mean_pct || d.relative_humidity_mean || 65;
+                const rain = d.precipitation_sum_mm || d.rainfall_mm || 0;
+                return `
+                  <tr>
+                    <td class="mono" style="padding:4px 8px">${d.date.slice(5)}</td>
+                    <td class="mono" style="padding:4px 8px">${temp.toFixed(1)}</td>
+                    <td class="mono" style="padding:4px 8px">${humid.toFixed(0)}%</td>
+                    <td class="mono" style="padding:4px 8px">${rain.toFixed(1)}</td>
+                    <td style="padding:4px 8px">${rain > 5.0 ? '🌧 Rain' : humid > 80 ? '☁ Overcast' : '☀ Clear'}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Action Brief Section -->
+      <div style="background:rgba(239,68,68,0.03);border:1px solid var(--border-color);padding:12px;margin-bottom:20px">
+        <strong style="color:var(--text-primary);font-size:11px;display:block;margin-bottom:3px">📡 Prescriptive Action Brief for Yard GM:</strong>
+        <span style="font-size:11px;color:var(--text-secondary);line-height:1.4">${actionText}</span>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button onclick="closeLiveForecastModal()" class="dl-btn" style="flex:1;justify-content:center;height:32px;font-weight:700">
+          Acknowledge & Close
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function closeLiveForecastModal() {
+  const modal = document.getElementById('liveForecastModal');
+  if (modal) modal.remove();
+}
+
 async function toggleLiveWeather() {
   const btn = document.getElementById('liveWxBtn');
   const dot = document.getElementById('liveWxDot');
@@ -6059,6 +6174,14 @@ async function toggleLiveWeather() {
     
     // Automatically set range selector to 7D (forecast length)
     switchWxTimeRange(7);
+    await loadWxExplorerTimeseries();
+    
+    // Launch premium summary popup modal
+    if (_currentWxTimeseriesData && _currentWxTimeseriesData.length) {
+      const mineSelect = document.getElementById('wxExplorerMine');
+      const mineName = mineSelect.options[mineSelect.selectedIndex].text;
+      showLiveForecastSummaryModal(mineName, _currentWxTimeseriesData);
+    }
   } else {
     // Reset to Default state
     btn.style.background = 'var(--color-blue-bg)';
@@ -6069,6 +6192,7 @@ async function toggleLiveWeather() {
     
     // Reset range selector to 90D default
     switchWxTimeRange(90);
+    await loadWxExplorerTimeseries();
   }
 }
 
