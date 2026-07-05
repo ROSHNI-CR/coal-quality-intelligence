@@ -6028,7 +6028,15 @@ const FEATURE_EXPLANATIONS = {
 };
 
 function showFeatureSHAPExplanation(featureName, score) {
-  const mappingKey = Object.keys(FEATURE_EXPLANATIONS).find(k => featureName.toLowerCase().includes(k.replace(/_mean|_sum|_max/g, '').toLowerCase())) || featureName;
+  const clean = (s) => s.toLowerCase()
+    .replace(/_mean|_sum|_max|_10m|_2m|_kmh|_pct|_mm|_mj|_hpa|_m/g, '')
+    .replace(/[^a-z0-9]/g, '');
+  const cf = clean(featureName);
+  const mappingKey = Object.keys(FEATURE_EXPLANATIONS).find(k => {
+    const ck = clean(k);
+    return ck.includes(cf) || cf.includes(ck);
+  }) || featureName;
+  
   const info = FEATURE_EXPLANATIONS[mappingKey] || {
     title: varName(featureName),
     definition: "Daily weather parameter registered by the mine's AWS station.",
