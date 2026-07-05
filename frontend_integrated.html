@@ -6589,16 +6589,18 @@ function initWeatherRadarSweep() {
   let angle = 0;
 
   const blips = [
-    { x: cx + 30, y: cy - 40, label: "Gevra AWS", opacity: 0.1 },
-    { x: cx - 40, y: cy + 30, label: "Kusmunda AWS", opacity: 0.1 },
-    { x: cx + 50, y: cy + 20, label: "BCCL Yard", opacity: 0.1 }
+    { x: cx + 30, y: cy - 40, label: "Gevra AWS", opacity: 0.2 },
+    { x: cx - 40, y: cy + 30, label: "Kusmunda AWS", opacity: 0.2 },
+    { x: cx + 50, y: cy + 20, label: "BCCL Yard", opacity: 0.2 }
   ];
 
   function draw() {
+    // Canvas background
     ctx.fillStyle = 'rgba(5, 21, 15, 0.08)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.strokeStyle = 'rgba(22, 197, 94, 0.12)';
+    // Dynamic grid rings (high visibility)
+    ctx.strokeStyle = 'rgba(34, 197, 94, 0.35)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.arc(cx, cy, radius * 0.3, 0, Math.PI * 2);
@@ -6606,6 +6608,8 @@ function initWeatherRadarSweep() {
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.stroke();
 
+    // Axes
+    ctx.strokeStyle = 'rgba(34, 197, 94, 0.25)';
     ctx.beginPath();
     ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy);
     ctx.moveTo(cx, cy - radius); ctx.lineTo(cx, cy + radius);
@@ -6614,8 +6618,9 @@ function initWeatherRadarSweep() {
     const sx = cx + radius * Math.cos(angle);
     const sy = cy + radius * Math.sin(angle);
 
-    ctx.strokeStyle = 'rgba(34, 197, 94, 0.5)';
-    ctx.lineWidth = 2.2;
+    // High contrast sweeping radial line
+    ctx.strokeStyle = 'rgba(34, 197, 94, 0.95)';
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.lineTo(sx, sy);
@@ -6627,24 +6632,29 @@ function initWeatherRadarSweep() {
       while (diff < -Math.PI) diff += Math.PI * 2;
       while (diff > Math.PI) diff -= Math.PI * 2;
 
-      if (Math.abs(diff) < 0.08) {
+      // Sweep hit detection
+      if (Math.abs(diff) < 0.12) {
         b.opacity = 1.0;
       } else {
-        b.opacity = Math.max(0.08, b.opacity - 0.005);
+        b.opacity = Math.max(0.18, b.opacity - 0.005);
       }
 
+      // Blip dot
       ctx.fillStyle = `rgba(34, 197, 94, ${b.opacity})`;
       ctx.beginPath();
-      ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+      ctx.arc(b.x, b.y, 4.5, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.strokeStyle = `rgba(34, 197, 94, ${b.opacity * 0.3})`;
+      // Expansion ring
+      ctx.strokeStyle = `rgba(34, 197, 94, ${b.opacity * 0.45})`;
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(b.x, b.y, 10 * (1.5 - b.opacity), 0, Math.PI * 2);
+      ctx.arc(b.x, b.y, 11 * (1.5 - b.opacity), 0, Math.PI * 2);
       ctx.stroke();
 
-      ctx.fillStyle = `rgba(34, 197, 94, ${b.opacity * 0.85})`;
-      ctx.font = '8.5px var(--font-sans)';
+      // Blip label
+      ctx.fillStyle = `rgba(34, 197, 94, ${Math.max(0.65, b.opacity)})`;
+      ctx.font = 'bold 9px var(--font-sans)';
       ctx.fillText(b.label, b.x + 8, b.y + 3);
     });
 
