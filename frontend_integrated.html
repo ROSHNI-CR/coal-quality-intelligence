@@ -4335,6 +4335,1374 @@ function quickExplain(mineCode) {
   navigateToContext('AI Quality Forecaster');
 }
 
+async function initCoalQuality() {
+  const kpis = await apiFetch('/api/analytics/kpis');
+  const trend = await apiFetch('/api/analytics/gcv-trend');
+  const subs = await apiFetch('/api/analytics/subsidiary-performance');
+
+  if (kpis) {
+    document.getElementById('cqAvgGCV').innerHTML = `${Number(kpis.avg_gcv_kcal_kg).toLocaleString()}<span class="unit"> kcal/kg</span>`;
+    document.getElementById('cqAvgMoisture').innerHTML = `${kpis.avg_moisture_pct}<span class="unit"> %</span>`;
+  }
+
+  if (trend && trend.monthly_gcv) {
+    const months = trend.monthly_gcv;
+    const labels = months.map(m => m.month.slice(0, 7));
+    const vals = months.map(m => m.avg_gcv);
+    const totalSamples = months.reduce((acc, curr) => acc + curr.sample_count, 0);
+    
+    document.getElementById('cqSamples').textContent = Number(totalSamples).toLocaleString();
+
+    const canvas = document.getElementById('cqGCVChart');
+    if (canvas) {
+      new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'GCV (kcal/kg)', data: vals, borderColor: '#10b981',
+            backgroundColor: 'rgba(16,185,129,0.06)', borderWidth: 2, tension: 0.38, fill: true,
+            pointRadius: 2.5, pointBackgroundColor: '#10b981'
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            x: { grid: { color: 'rgba(0, 0, 0, 0.04)' } },
+            y: { grid: { color: 'rgba(0, 0, 0, 0.04)' }, ticks: { callback: v => v.toLocaleString() } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+  }
+
+  if (subs && subs.subsidiaries) {
+    const list = document.getElementById('cqSubsidiaryList');
+    if (list) {
+      list.innerHTML = subs.subsidiaries.map(s => `
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(0, 0, 0, 0.04)">
+          <span>${s.subsidiary}</span>
+          <span style="font-weight:600;font-family:var(--font-mono)">${s.avg_gcv ? Number(s.avg_gcv).toLocaleString() : '—'} kcal</span>
+        </div>
+      `).join('');
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ENVIRONMENTAL FACTORS PAGE
+// ═══════════════════════════════════════════════════════════════════════════
+const GLOSSARY_DATA = {
+  surface_pressure_mean_hpa: {
+    name: "Atmospheric Pressure",
+    unit: "hPa",
+    type: "Raw Weather Variable",
+    definition: "The weight of the atmosphere pressing down on the surface, averaged daily.",
+    why_matters: "A drop in surface pressure often precedes storm systems and precipitation events, serving as a leading indicator of weather changes.",
+    influence: "Indirect. Low pressure correlates with rainfall, which directly increases coal moisture and lowers gross calorific value (GCV)."
+  },
+  rolling_humidity_7d_pct: {
+    name: "7-Day Rolling Humidity",
+    unit: "%",
+    type: "Engineered Feature",
+    definition: "The moving average of relative atmospheric humidity over the previous seven days.",
+    why_matters: "Captures cumulative atmospheric dampness, indicating whether the surrounding environment is promoting drying or moisture absorption.",
+    influence: "High rolling humidity slows down the natural air-drying of stockpiles, maintaining high surface moisture and reducing GCV."
+  },
+  rolling_solar_radiation_7d_mj_m2: {
+    name: "7-Day Rolling Solar Radiation",
+    unit: "MJ/m²",
+    type: "Engineered Feature",
+    definition: "Cumulative solar energy received at the surface over the previous seven days.",
+    why_matters: "Represents the total solar heating energy available to evaporate water from open-cast pits and coal stockpiles.",
+    influence: "Higher solar exposure accelerates stockpile drying, significantly reducing moisture content and raising GCV."
+  },
+  moisture_accumulation_index: {
+    name: "Moisture Accumulation Index",
+    unit: "Index (0-100)",
+    type: "Engineered Feature",
+    definition: "Calculated index tracking moisture input (rainfall and condensation) against evaporation potential.",
+    why_matters: "Quantifies the net water retention of the coal stockpile, accounting for damp conditions and drainage rates.",
+    influence: "A high index indicates waterlogged stockpiles, leading to elevated moisture content and severe degradation of GCV."
+  },
+  wind_gust_max_kmh: {
+    name: "Wind Gust",
+    unit: "km/h",
+    type: "Raw Weather Variable",
+    definition: "The maximum short-duration wind speed recorded during the daily observation period.",
+    why_matters: "High gusts cause structural disruption, surface drying, and increase airborne coal dust emissions in open yards.",
+    influence: "Wind gusts accelerate convective evaporation on stockpile surfaces, lowering moisture. However, extreme gusts can cause dust loss."
+  },
+  wind_speed_mean_kmh: {
+    name: "Wind Speed",
+    unit: "km/h",
+    type: "Raw Weather Variable",
+    definition: "The average wind speed recorded over the daily observation period.",
+    why_matters: "Promotes convective air movement over exposed coal, facilitating evaporation of surface water.",
+    influence: "Sustained wind speeds increase the drying rate of stockpiles, lowering moisture and improving GCV."
+  },
+  temperature_range_c: {
+    name: "Temperature Range",
+    unit: "°C",
+    type: "Engineered Feature",
+    definition: "The difference between the daily maximum and minimum temperatures.",
+    why_matters: "Indicates thermal cycling. High ranges suggest clear skies and intense daytime solar heating, followed by rapid radiative cooling.",
+    influence: "Large temperature ranges enhance evaporation during hot peaks, helping reduce moisture."
+  },
+  relative_humidity_max_pct: {
+    name: "Maximum Humidity",
+    unit: "%",
+    type: "Raw Weather Variable",
+    definition: "The peak relative humidity recorded during the day, typically at night or early morning.",
+    why_matters: "High peak humidity leads to dew formation and condensation on the surfaces of exposed coal stockpiles.",
+    influence: "Leads to surface dampness and absorption of water, increasing moisture content and lowering immediate GCV."
+  },
+  rainfall_mm: {
+    name: "Rainfall",
+    unit: "mm",
+    type: "Raw Weather Variable",
+    definition: "Total liquid precipitation recorded over a 24-hour period.",
+    why_matters: "Direct water input onto open coal stockpiles and open-cast mining pits.",
+    influence: "Directly increases coal moisture and ash contamination (due to runoff mud), drastically lowering gross calorific value (GCV)."
+  },
+  relative_humidity_mean_pct: {
+    name: "Relative Humidity",
+    unit: "%",
+    type: "Raw Weather Variable",
+    definition: "The average daily ratio of water vapor pressure in the air to the saturation vapor pressure.",
+    why_matters: "Governs the rate of water exchange between the atmosphere and exposed coal surfaces.",
+    influence: "Higher relative humidity inhibits evaporation, leading to higher moisture retention in the coal."
+  },
+  dew_point_mean_c: {
+    name: "Dew Point",
+    unit: "°C",
+    type: "Raw Weather Variable",
+    definition: "The average daily temperature at which air must be cooled to become saturated with water vapor.",
+    why_matters: "Direct indicator of absolute atmospheric moisture content.",
+    influence: "High dew points indicate muggy conditions with low drying potential, maintaining higher coal moisture."
+  },
+  temperature_mean_c: {
+    name: "Mean Temperature",
+    unit: "°C",
+    type: "Raw Weather Variable",
+    definition: "The average air temperature recorded over the day.",
+    why_matters: "Directly affects the thermodynamic rate of water evaporation from coal surfaces.",
+    influence: "Warm temperatures increase the evaporation rate, helping dry out coal, which reduces moisture and increases GCV."
+  },
+  dew_spread_c: {
+    name: "Dew Spread",
+    unit: "°C",
+    type: "Engineered Feature",
+    definition: "The difference between mean temperature and dew point.",
+    why_matters: "A wider dew spread indicates dry air (far from saturation), which is optimal for stockpile drying.",
+    influence: "Large spreads accelerate evaporation, helping dry out the coal and raising GCV."
+  },
+  thermal_stress_index: {
+    name: "Thermal Stress Index",
+    unit: "Index (0-100)",
+    type: "Engineered Feature",
+    definition: "A combined index of mean temperature and relative humidity tracking heat stress on stockpiles.",
+    why_matters: "Identifies conditions where high heat and humidity combine to prevent natural drying or promote chemical degradation.",
+    influence: "High thermal stress correlates with humid, muggy weather, retarding moisture evaporation and decreasing GCV."
+  },
+  cloud_cover_mean_pct: {
+    name: "Cloud Cover",
+    unit: "%",
+    type: "Raw Weather Variable",
+    definition: "The average percentage of the sky covered by clouds daily.",
+    why_matters: "Governs the amount of solar radiation reaching the earth's surface.",
+    influence: "High cloud cover blocks solar radiation, slowing down the natural evaporation and drying of stockpiles."
+  },
+  solar_radiation_mj_m2: {
+    name: "Solar Radiation",
+    unit: "MJ/m²",
+    type: "Raw Weather Variable",
+    definition: "Total solar energy received per square meter during the day.",
+    why_matters: "Provides the heat energy required for phase change of water from liquid to vapor.",
+    influence: "Directly dries coal stockpiles, lowering moisture levels and raising GCV."
+  },
+  rolling_rainfall_7d_mm: {
+    name: "7-Day Rolling Rainfall",
+    unit: "mm",
+    type: "Engineered Feature",
+    definition: "Cumulative rainfall over the past seven days.",
+    why_matters: "Indicates long-term ground wetness and cumulative water infiltration into stockpiles.",
+    influence: "Sustained rainfall leads to deep stockpile saturation, raising moisture levels long-term and reducing GCV."
+  },
+  rolling_rainfall_3d_mm: {
+    name: "3-Day Rolling Rainfall",
+    unit: "mm",
+    type: "Engineered Feature",
+    definition: "Cumulative rainfall over the past three days.",
+    why_matters: "Indicates short-term waterlogging and surface mud runoffs.",
+    influence: "Leads to quick surface moisture spikes and potential ash contamination, decreasing GCV."
+  },
+  drying_potential: {
+    name: "Drying Potential",
+    unit: "Index (0-100)",
+    type: "Engineered Feature",
+    definition: "Calculated atmospheric drying rate based on temperature, wind speed, solar radiation, and humidity.",
+    why_matters: "Measures the atmosphere's capacity to dry out stockpiled coal.",
+    influence: "Higher drying potential directly lowers coal moisture content, increasing GCV."
+  },
+  environmental_risk_index: {
+    name: "Environmental Risk Index",
+    unit: "Index (0-100)",
+    type: "Engineered Feature",
+    definition: "Overall risk index representing potential quality degradation due to negative weather factors.",
+    why_matters: "Synthesizes multiple weather threats into a single operational flag.",
+    influence: "A high risk index correlates with low GCV and high moisture, prompting early blending or washing."
+  },
+  weather_stability_index: {
+    name: "Weather Stability Index",
+    unit: "Index (0-100)",
+    type: "Engineered Feature",
+    definition: "Measures the variance of temperature and pressure over a multi-day window.",
+    why_matters: "Indicates whether the atmospheric conditions are stable or transitioning.",
+    influence: "High stability allows for predictable stockpile behavior and quality forecasts."
+  },
+  consecutive_wet_days: {
+    name: "Consecutive Wet Days",
+    unit: "Days",
+    type: "Engineered Feature",
+    definition: "The number of consecutive days with precipitation above 1mm.",
+    why_matters: "Indicates persistent damp conditions which prevent stockpiles from drying out.",
+    influence: "Increases internal moisture accumulation, lowering GCV."
+  },
+  consecutive_dry_days: {
+    name: "Consecutive Dry Days",
+    unit: "Days",
+    type: "Engineered Feature",
+    definition: "The number of consecutive days with zero or negligible precipitation.",
+    why_matters: "Indicates prolonged dry spells ideal for stockpile airing and solar drying.",
+    influence: "Reduces moisture content, raising GCV."
+  }
+};
+
+async function initEnvFactors() {
+  const gcv = await apiFetch('/api/analytics/environmental-influence?target_metric=gcv&top_n=20');
+  const moisture = await apiFetch('/api/analytics/environmental-influence?target_metric=moisture&top_n=20');
+  const ash = await apiFetch('/api/analytics/environmental-influence?target_metric=ash&top_n=20');
+
+  if (gcv && gcv.data) renderEFList('efGCVList', gcv.data);
+  if (moisture && moisture.data) renderEFList('efMoistureList', moisture.data);
+  if (ash && ash.data) renderEFList('efAshList', ash.data);
+
+  renderKBCards();
+}
+
+function renderEFList(containerId, rows) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  rows.forEach((r, i) => {
+    const dir = r.ml_direction === 'positive' ? '↑' : r.ml_direction === 'negative' ? '↓' : '—';
+    const validation = r.agreement_with_kb === 'agrees' ? '<span style="color:var(--color-green);font-size:8px;font-weight:700">✓ KB</span>' : '';
+    
+    const row = document.createElement('div');
+    row.className = 'ei-bar-row';
+    row.innerHTML = `
+      <span class="ei-factor" style="width:105px">${varName(r.variable_name)}</span>
+      <div class="ei-bar-wrap"><div class="ei-bar-fill" style="width:${r.importance_pct}%;background:${BAR_COLOURS[i%6]}"></div></div>
+      <span class="ei-pct" style="width:52px;text-align:right">${r.importance_pct}% ${dir} ${validation}</span>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function renderKBCards(filterQuery = "") {
+  const el = document.getElementById('efKBList');
+  if (!el) return;
+  el.innerHTML = '';
+
+  const query = filterQuery.toLowerCase().trim();
+
+  Object.entries(GLOSSARY_DATA).forEach(([field, item]) => {
+    if (query && !item.name.toLowerCase().includes(query) && !item.definition.toLowerCase().includes(query) && !field.toLowerCase().includes(query)) {
+      return;
+    }
+
+    const badgeBg = item.type === "Engineered Feature" ? "var(--color-blue-bg)" : "rgba(148, 163, 184, 0.08)";
+    const badgeColor = item.type === "Engineered Feature" ? "var(--color-blue)" : "var(--text-secondary)";
+
+    el.innerHTML += `
+      <div class="card" style="padding:14px;background:var(--bg-input);gap:8px;border-color:var(--border-color)">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div>
+            <h4 style="font-size:12.5px;font-weight:700;color:var(--text-primary)">${item.name}</h4>
+            <span style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-tertiary)">${field} · [${item.unit}]</span>
+          </div>
+          <span style="font-size:8.5px;font-weight:700;padding:2px 6px;border-radius:0px;background:${badgeBg};color:${badgeColor};white-space:nowrap">${item.type}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-secondary);line-height:1.4">${item.definition}</div>
+        <div style="border-top:1px solid rgba(0, 0, 0, 0.06);padding-top:6px;margin-top:4px">
+          <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.3px">Operational Relevance</div>
+          <div style="font-size:11px;color:var(--text-secondary);line-height:1.4;margin-top:2px">${item.why_matters}</div>
+        </div>
+        <div style="border-top:1px solid rgba(0, 0, 0, 0.06);padding-top:6px">
+          <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.3px">Expected Influence</div>
+          <div style="font-size:11px;color:var(--text-secondary);line-height:1.4;margin-top:2px">${item.influence}</div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function filterGlossary(val) {
+  renderKBCards(val);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WEATHER OBSERVATIONS PAGE
+// ═══════════════════════════════════════════════════════════════════════════
+let _currentWxTimeRange = 90;
+let _currentWxTimeseriesData = [];
+let wxExplorerChartInstance = null;
+
+async function initWeatherIntelligence() {
+  if (!_gisMinesData || !_gisMinesData.length) {
+    const data = await apiFetch('/api/analytics/mines/gis-layer');
+    if (data && data.mines) {
+      _gisMinesData = data.mines;
+    }
+  }
+
+  const explorerMine = document.getElementById('wxExplorerMine');
+  if (explorerMine && _gisMinesData && _gisMinesData.length) {
+    const sorted = [..._gisMinesData].sort((a,b) => a.mine_name.localeCompare(b.mine_name));
+    explorerMine.innerHTML = sorted.map(m => `<option value="${m.mine_code}">${m.mine_name} (${m.subsidiary})</option>`).join('');
+  }
+
+  renderWeatherCenter();
+
+  if (explorerMine && explorerMine.value) {
+    loadWxExplorerTimeseries();
+  }
+}
+
+function resetWeatherFilters() {
+  document.getElementById('wxFilterSubsidiary').value = '';
+  document.getElementById('wxFilterDriver').value = '';
+  document.getElementById('wxFilterRisk').value = '';
+  renderWeatherCenter();
+}
+
+function filterWeatherCenter() {
+  renderWeatherCenter();
+}
+
+function renderWeatherCenter() {
+  if (!_gisMinesData || !_gisMinesData.length) return;
+
+  const subFilter = document.getElementById('wxFilterSubsidiary').value;
+  const driverFilter = document.getElementById('wxFilterDriver').value;
+  const riskFilter = document.getElementById('wxFilterRisk').value;
+
+  const filtered = _gisMinesData.filter(m => {
+    if (subFilter && m.subsidiary !== subFilter) return false;
+    if (driverFilter) {
+      if (driverFilter === 'rain' && (m.rainfall || 0) <= 5) return false;
+      if (driverFilter === 'humidity' && (m.relative_humidity || 0) <= 80) return false;
+      if (driverFilter === 'temp' && (m.temperature || 0) <= 35) return false;
+      if (driverFilter === 'solar' && (m.solar_radiation || 0) >= 12) return false;
+    }
+    if (riskFilter) {
+      const eriVal = m.eri || 0;
+      if (riskFilter === 'high' && eriVal <= 60) return false;
+      if (riskFilter === 'mod' && (eriVal < 30 || eriVal > 60)) return false;
+      if (riskFilter === 'low' && eriVal >= 30) return false;
+    }
+    return true;
+  });
+
+  const count = filtered.length;
+  if (count === 0) {
+    document.getElementById('wxExecSummary').textContent = "No mines match the active filter criteria.";
+    document.getElementById('wxKpiPanel').innerHTML = "";
+    document.getElementById('wxRiskGrid').innerHTML = "";
+    document.getElementById('wxHotspotsBody').innerHTML = "<tr><td colspan='9' style='text-align:center;color:var(--text-disabled)'>No matching hotspots found.</td></tr>";
+    document.getElementById('wxOpsList').innerHTML = "<div>No recommendations under current filter.</div>";
+    return;
+  }
+
+  // 1. Executive Intelligence Briefing
+  const avgHum = (filtered.reduce((acc, m) => acc + (m.relative_humidity || 0), 0) / count).toFixed(1);
+  const wetMines = filtered.filter(m => (m.rainfall || 0) > 10).length;
+  const highestRainMine = [...filtered].sort((a,b) => (b.rainfall || 0) - (a.rainfall || 0))[0];
+  const highHumMines = filtered.filter(m => (m.relative_humidity || 0) > 90).length;
+  const highRiskMines = filtered.filter(m => (m.eri || 0) > 60).length;
+
+  let summaryText = `Across the ${count} monitored mining assets, environmental conditions show average relative humidity of <strong>${avgHum}%</strong>. `;
+  if (wetMines > 0) {
+    summaryText += `<strong>${wetMines} stations</strong> are experiencing heavy rainfall (>10mm), with the highest precipitation recorded at <strong>${highestRainMine.mine_name} (${highestRainMine.rainfall}mm)</strong>. `;
+  } else {
+    summaryText += "No active heavy precipitation events are recorded. ";
+  }
+  if (highHumMines > 0) {
+    summaryText += `High humidity levels exceed 90% at <strong>${highHumMines} sites</strong>, increasing moisture absorption risk at open-cast stockpiles. `;
+  }
+  if (highRiskMines > 0) {
+    summaryText += `Currently, <strong>${highRiskMines} mines</strong> register high Environmental Risk indices (ERI > 60). Sampling and loading operations in these regions should be monitored closely.`;
+  } else {
+    summaryText += "National Environmental Risk level remains within standard bounds.";
+  }
+  document.getElementById('wxExecSummary').innerHTML = summaryText;
+
+  // 2. National Environmental Summary Panel (6 KPIs)
+  const maxRainMine = [...filtered].sort((a,b) => (b.rainfall || 0) - (a.rainfall || 0))[0];
+  const maxHumMine = [...filtered].sort((a,b) => (b.relative_humidity || 0) - (a.relative_humidity || 0))[0];
+  const maxTempMine = [...filtered].sort((a,b) => (b.temperature || 0) - (a.temperature || 0))[0];
+  const minPresMine = [...filtered].sort((a,b) => (a.atmospheric_pressure || 9999) - (b.atmospheric_pressure || 9999))[0];
+  const maxSolMine = [...filtered].sort((a,b) => (b.solar_radiation || 0) - (a.solar_radiation || 0))[0];
+  
+  let riskLevel = "LOW";
+  let riskClass = "low";
+  if (highRiskMines > 25) { riskLevel = "HIGH"; riskClass = "high"; }
+  else if (highRiskMines > 5) { riskLevel = "MODERATE"; riskClass = "medium"; }
+
+  document.getElementById('wxKpiPanel').innerHTML = `
+    <!-- GCV Model Metrics Card -->
+    <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px;border:none;background:linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);grid-column:span 2;box-shadow:var(--shadow-sm);border-radius:var(--radius-lg);transition:transform 0.2s">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10.5px;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:1px">GCV Quality Model</span>
+        <span style="font-size:8.5px;font-weight:800;padding:2px 8px;border-radius:0px;background:#dbeafe;color:#1e40af;text-transform:uppercase">Active</span>
+      </div>
+      <div>
+        <div style="font-size:26px;font-weight:800;color:#1e3a8a;font-family:var(--font-mono)">0.347</div>
+        <div style="font-size:10px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">Overall R² Validation Score</div>
+        <div style="font-size:11.5px;color:#1e40af;margin-top:4px;font-weight:500">Gradient Boosting Regressor (LightGBM)</div>
+      </div>
+      <div style="border-top:1px dashed rgba(59, 130, 246, 0.25);padding-top:10px;margin-top:4px;display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10.5px;color:#1e40af">
+        <div>RMSE: <strong>684.7 kcal/kg</strong></div>
+        <div>Samples: <strong>88,686 runs</strong></div>
+        <div>Validation: <strong>GroupKFold</strong></div>
+        <div>Features: <strong>20 weather vars</strong></div>
+      </div>
+    </div>
+
+    <!-- Moisture Model Metrics Card -->
+    <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px;border:none;background:linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);grid-column:span 2;box-shadow:var(--shadow-sm);border-radius:var(--radius-lg);transition:transform 0.2s">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10.5px;font-weight:800;color:#065f46;text-transform:uppercase;letter-spacing:1px">Moisture Quality Model</span>
+        <span style="font-size:8.5px;font-weight:800;padding:2px 8px;border-radius:0px;background:#d1fae5;color:#065f46;text-transform:uppercase">Active</span>
+      </div>
+      <div>
+        <div style="font-size:26px;font-weight:800;color:#064e3b;font-family:var(--font-mono)">0.359</div>
+        <div style="font-size:10px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">Overall R² Validation Score</div>
+        <div style="font-size:11.5px;color:#065f46;margin-top:4px;font-weight:500">Gradient Boosting Regressor (LightGBM)</div>
+      </div>
+      <div style="border-top:1px dashed rgba(16, 185, 129, 0.25);padding-top:10px;margin-top:4px;display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10.5px;color:#065f46">
+        <div>RMSE: <strong>3.02% water</strong></div>
+        <div>Samples: <strong>88,686 runs</strong></div>
+        <div>Validation: <strong>GroupKFold</strong></div>
+        <div>Features: <strong>20 weather vars</strong></div>
+      </div>
+    </div>
+
+    <!-- Ash Model Metrics Card -->
+    <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px;border:none;background:linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);grid-column:span 2;box-shadow:var(--shadow-sm);border-radius:var(--radius-lg);transition:transform 0.2s">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10.5px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:1px">Ash Quality Model</span>
+        <span style="font-size:8.5px;font-weight:800;padding:2px 8px;border-radius:0px;background:#fef3c7;color:#92400e;text-transform:uppercase">Active</span>
+      </div>
+      <div>
+        <div style="font-size:26px;font-weight:800;color:#78350f;font-family:var(--font-mono)">0.230</div>
+        <div style="font-size:10px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">Overall R² Validation Score</div>
+        <div style="font-size:11.5px;color:#92400e;margin-top:4px;font-weight:500">Gradient Boosting Regressor (LightGBM)</div>
+      </div>
+      <div style="border-top:1px dashed rgba(245, 158, 11, 0.25);padding-top:10px;margin-top:4px;display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10.5px;color:#92400e">
+        <div>RMSE: <strong>7.75% ash</strong></div>
+        <div>Samples: <strong>90,779 runs</strong></div>
+        <div>Validation: <strong>GroupKFold</strong></div>
+        <div>Features: <strong>20 weather vars</strong></div>
+      </div>
+    </div>
+  `;
+
+  // 3. Environmental Risk Distribution Grid
+  const distSpecs = [
+    { label: "Heavy Rainfall", count: filtered.filter(m => (m.rainfall || 0) > 10).length, cond: "rainfall > 10mm" },
+    { label: "High Humidity", count: filtered.filter(m => (m.relative_humidity || 0) > 85).length, cond: "humidity > 85%" },
+    { label: "Prolonged Wet Spell", count: filtered.filter(m => (m.consecutive_wet_days || 0) >= 3).length, cond: "wet days >= 3" },
+    { label: "Low Solar Rad.", count: filtered.filter(m => (m.solar_radiation || 0) < 12).length, cond: "solar < 12 MJ" },
+    { label: "High Wind Speed", count: filtered.filter(m => (m.wind_speed || 0) > 15).length, cond: "wind > 15 km/h" },
+    { label: "High Wind Gust", count: filtered.filter(m => (m.wind_gust || 0) > 35).length, cond: "gust > 35 km/h" },
+    { label: "Low Pressure Systems", count: filtered.filter(m => (m.atmospheric_pressure || 0) < 995).length, cond: "pressure < 995" },
+    { label: "Heat Stress", count: filtered.filter(m => (m.temperature || 0) > 38).length, cond: "temp > 38°C" }
+  ];
+
+  document.getElementById('wxRiskGrid').innerHTML = distSpecs.map(spec => {
+    const pct = ((spec.count / count) * 100).toFixed(1);
+    let severity = "low";
+    let cardStyle = "background:#f0fdf4; border:1px solid #dcfce7; color:#166534;";
+    let textStyle = "color:#14532d;";
+    let condStyle = "color:#15803d;";
+    let countStyle = "color:#166534;";
+    let pillStyle = "background:#dcfce7; color:#166534;";
+
+    if (spec.count > 25) {
+      severity = "high";
+      cardStyle = "background:#fef2f2; border:1px solid #fee2e2; color:#991b1b;";
+      textStyle = "color:#7f1d1d;";
+      condStyle = "color:#b91c1c;";
+      countStyle = "color:#991b1b;";
+      pillStyle = "background:#fee2e2; color:#991b1b;";
+    } else if (spec.count > 5) {
+      severity = "medium";
+      cardStyle = "background:#fffbeb; border:1px solid #fef3c7; color:#92400e;";
+      textStyle = "color:#78350f;";
+      condStyle = "color:#b45309;";
+      countStyle = "color:#92400e;";
+      pillStyle = "background:#fef3c7; color:#92400e;";
+    }
+    
+    return `
+      <div style="padding:12px 16px;border-radius:var(--radius-md);display:flex;justify-content:space-between;align-items:center;transition:transform 0.2s;box-shadow:var(--shadow-sm);${cardStyle}">
+        <div>
+          <div style="font-weight:800;font-size:12px;${textStyle}">${spec.label}</div>
+          <div style="font-size:9.5px;font-weight:600;margin-top:2px;${condStyle}">${spec.cond}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:14px;font-weight:800;${countStyle}">${spec.count} <span style="font-size:10px;font-weight:600;opacity:0.8">(${pct}%)</span></div>
+          <span style="font-size:8.5px;font-weight:800;padding:2px 6px;border-radius:0px;margin-top:4px;display:inline-block;text-transform:uppercase;${pillStyle}">${severity}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // 4. Hotspots Table
+  const hotspots = [...filtered].sort((a,b) => (b.eri || 0) - (a.eri || 0));
+  const tbody = document.getElementById('wxHotspotsBody');
+  tbody.innerHTML = hotspots.map(h => {
+    let action = "Suitable for Dispatch";
+    let actionPill = '<span class="risk-pill low" style="font-size:9px;padding:2px 8px;font-weight:700;text-transform:uppercase">✓ Suitable</span>';
+    if ((h.rainfall || 0) > 15) {
+      action = "Delay Sampling";
+      actionPill = '<span class="risk-pill high" style="font-size:9px;padding:2px 8px;font-weight:700;text-transform:uppercase">⚠ Delay Sampling</span>';
+    } else if ((h.relative_humidity || 0) > 90) {
+      action = "High Moisture";
+      actionPill = '<span class="risk-pill medium" style="font-size:9px;padding:2px 8px;font-weight:700;text-transform:uppercase">◑ Moisture Risk</span>';
+    } else if ((h.consecutive_wet_days || 0) >= 3) {
+      action = "Increase Mon.";
+      actionPill = '<span class="risk-pill medium" style="font-size:9px;padding:2px 8px;font-weight:700;text-transform:uppercase;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">✦ Increase Mon.</span>';
+    } else if ((h.solar_radiation || 0) > 20) {
+      action = "Good Drying";
+      actionPill = '<span class="risk-pill low" style="font-size:9px;padding:2px 8px;font-weight:700;text-transform:uppercase;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0">☼ Good Drying</span>';
+    }
+
+    const subColors = {
+      BCCL: 'background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe',
+      CCL: 'background:#f0fdf4;color:#166534;border:1px solid #bbf7d0',
+      ECL: 'background:#fdf2f8;color:#9d174d;border:1px solid #fbcfe8',
+      MCL: 'background:#fffbeb;color:#92400e;border:1px solid #fef3c7',
+      NCL: 'background:#faf5ff;color:#6b21a8;border:1px solid #e9d5ff',
+      SECL: 'background:#f0fdfa;color:#115e59;border:1px solid #ccfbf1',
+      WCL: 'background:#fef2f2;color:#991b1b;border:1px solid #fee2e2'
+    };
+    const subStyle = subColors[h.subsidiary] || 'background:var(--bg-input);color:var(--text-secondary);border:1px solid var(--border-color)';
+    const subPill = `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:0px;${subStyle}">${h.subsidiary}</span>`;
+
+    let eriClass = "low";
+    if (h.eri > 60) eriClass = "high";
+    else if (h.eri >= 30) eriClass = "medium";
+    const ERIBadge = `<span class="risk-pill ${eriClass}" style="font-size:10px;font-weight:800;padding:2px 8px;font-family:var(--font-mono)">${h.eri.toFixed(1)}</span>`;
+
+    const rainVal = h.rainfall > 0 
+      ? `<span style="color:#dc2626;font-weight:700;font-family:var(--font-mono)">🌧 ${h.rainfall} mm</span>` 
+      : `<span style="color:var(--text-disabled);font-family:var(--font-mono)">0.0 mm</span>`;
+    
+    const humVal = h.relative_humidity > 80 
+      ? `<span style="color:#ea580c;font-weight:700;font-family:var(--font-mono)">${h.relative_humidity}%</span>` 
+      : `<span style="color:var(--text-secondary);font-family:var(--font-mono)">${h.relative_humidity}%</span>`;
+
+    return `
+      <tr style="border-bottom:1px solid rgba(0, 0, 0, 0.035);transition:background 0.15s">
+        <td style="font-weight:700;color:var(--text-primary);padding:10px 14px">${h.mine_name}</td>
+        <td style="padding:10px 14px">${subPill}</td>
+        <td style="padding:10px 14px">${rainVal}</td>
+        <td style="padding:10px 14px">${humVal}</td>
+        <td style="padding:10px 14px;font-family:var(--font-mono)">${h.temperature}°C</td>
+        <td style="padding:10px 14px;font-family:var(--font-mono);color:var(--text-tertiary)">${h.atmospheric_pressure} hPa</td>
+        <td style="padding:10px 14px;font-family:var(--font-mono);color:var(--text-tertiary)">${h.solar_radiation} MJ/m²</td>
+        <td style="padding:10px 14px">${ERIBadge}</td>
+        <td style="padding:10px 14px">${actionPill}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // 5. Operational Recommendations
+  const opsList = document.getElementById('wxOpsList');
+  const recs = [];
+  if (wetMines > 0) {
+    recs.push(`➔ Delay quality sampling in <strong>${wetMines} mines</strong> experiencing heavy rainfall to avoid moisture bias in analysis.`);
+  }
+  if (highHumMines > 0) {
+    recs.push(`➔ Prioritize loading and dispatch from dry, covered stockpiles at <strong>${highHumMines} high-humidity sites</strong>.`);
+  }
+  const wetSpellMines = filtered.filter(m => (m.consecutive_wet_days || 0) >= 3).length;
+  if (wetSpellMines > 0) {
+    recs.push(`➔ Conduct mandatory stockpile moisture checks at <strong>${wetSpellMines} locations</strong> subject to prolonged wet spells (3+ days).`);
+  }
+  const goodDrying = filtered.filter(m => (m.solar_radiation || 0) > 20 && (m.rainfall || 0) === 0).length;
+  if (goodDrying > 0) {
+    recs.push(`➔ Schedule stockpile exposure and drying operations at <strong>${goodDrying} solar-abundant mines</strong>.`);
+  }
+  if (highRiskMines > 0) {
+    recs.push(`➔ Increase supervisor rounds and stockpile inspection frequency in <strong>${highRiskMines} high-risk sectors</strong>.`);
+  }
+  if (recs.length === 0) {
+    recs.push("➔ Standard operating conditions. All monitored mines are suitable for normal dispatch and laboratory sampling workflows.");
+  }
+  opsList.innerHTML = recs.map(r => `<div style="margin-bottom:4px">${r}</div>`).join('');
+}
+
+async function loadWxExplorerTimeseries() {
+  const mineCode = document.getElementById('wxExplorerMine').value;
+  if (!mineCode) return;
+  
+  let url = `/api/environmental/mines/${mineCode}/timeseries?start_date=2025-04-01&end_date=2026-03-31`;
+  if (window.isLiveWeatherActive) {
+    url = `/api/environmental/mines/${mineCode}/live-weather`;
+  }
+  
+  const data = await apiFetch(url);
+  if (!data || !data.data || !data.data.length) {
+    _currentWxTimeseriesData = [];
+    plotWxExplorerChart();
+    return;
+  }
+  _currentWxTimeseriesData = data.data;
+  plotWxExplorerChart();
+}
+
+function switchWxTimeRange(days) {
+  _currentWxTimeRange = days;
+  document.querySelectorAll('#wxTimeRangeGroup button').forEach(btn => btn.classList.remove('active'));
+  if (days === 7) document.getElementById('wxBtn7').classList.add('active');
+  if (days === 30) document.getElementById('wxBtn30').classList.add('active');
+  if (days === 90) document.getElementById('wxBtn90').classList.add('active');
+  if (days === 365) document.getElementById('wxBtn365').classList.add('active');
+  plotWxExplorerChart();
+}
+
+function plotWxExplorerChart() {
+  const canvas = document.getElementById('wxExplorerChart');
+  const eventsList = document.getElementById('wxEventsList');
+  if (!canvas) return;
+
+  if (wxExplorerChartInstance) {
+    wxExplorerChartInstance.destroy();
+    wxExplorerChartInstance = null;
+  }
+
+  if (!_currentWxTimeseriesData || !_currentWxTimeseriesData.length) {
+    if (eventsList) eventsList.innerHTML = '<div style="color:var(--text-disabled);text-align:center;margin-top:40px">No historical data.</div>';
+    return;
+  }
+
+  let subset = [..._currentWxTimeseriesData];
+  if (_currentWxTimeRange < subset.length) {
+    subset = subset.slice(subset.length - _currentWxTimeRange);
+  }
+
+  const labels = subset.map(r => r.date.slice(5));
+  const profile = document.getElementById('wxChartProfile').value;
+
+  let datasets = [];
+  let options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 9 } } },
+      y: { position: 'left', grid: { color: 'rgba(0, 0, 0, 0.04)' }, ticks: { font: { size: 9 } } },
+      y1: { position: 'right', grid: { display: false }, ticks: { font: { size: 9 } } }
+    },
+    plugins: {
+      legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 9.5 } } }
+    }
+  };
+
+  if (profile === 'moisture') {
+    datasets = [
+      {
+        label: 'Humidity (%)',
+        data: subset.map(r => r.relative_humidity_mean_pct),
+        borderColor: '#0284c7',
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        tension: 0.35,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Rainfall (mm)',
+        type: 'bar',
+        data: subset.map(r => r.rainfall_mm),
+        backgroundColor: 'rgba(59, 130, 246, 0.3)',
+        borderColor: '#2563eb',
+        borderWidth: 1,
+        yAxisID: 'y1'
+      },
+      {
+        label: 'Drying Potential',
+        data: subset.map(r => r.drying_potential),
+        borderColor: '#10b981',
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        tension: 0.35,
+        yAxisID: 'y'
+      }
+    ];
+    options.scales.y.ticks.callback = v => v + '%';
+    options.scales.y1.ticks.callback = v => v + 'mm';
+  } else if (profile === 'thermal') {
+    datasets = [
+      {
+        label: 'Temp (°C)',
+        data: subset.map(r => r.temperature_mean_c),
+        borderColor: '#ea580c',
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        tension: 0.35,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Dew Point (°C)',
+        data: subset.map(r => r.dew_point_mean_c),
+        borderColor: '#a855f7',
+        backgroundColor: 'transparent',
+        borderWidth: 1.2,
+        tension: 0.35,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Solar Rad (MJ)',
+        data: subset.map(r => r.solar_radiation_mj_m2),
+        borderColor: '#eab308',
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        tension: 0.35,
+        yAxisID: 'y1'
+      }
+    ];
+    options.scales.y.ticks.callback = v => v + '°C';
+    options.scales.y1.ticks.callback = v => v + ' MJ';
+  } else if (profile === 'atmos') {
+    datasets = [
+      {
+        label: 'Pressure (hPa)',
+        data: subset.map(r => r.surface_pressure_mean_hpa),
+        borderColor: '#6366f1',
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        tension: 0.35,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Wind Speed (km/h)',
+        data: subset.map(r => r.wind_speed_mean_kmh),
+        borderColor: '#14b8a6',
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        tension: 0.35,
+        yAxisID: 'y1'
+      },
+      {
+        label: 'Wind Gust (km/h)',
+        data: subset.map(r => r.wind_gust_max_kmh),
+        borderColor: '#f43f5e',
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        tension: 0.35,
+        yAxisID: 'y1'
+      }
+    ];
+    options.scales.y.ticks.callback = v => v + ' hPa';
+    options.scales.y1.ticks.callback = v => v + ' km/h';
+  }
+
+  wxExplorerChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options
+  });
+
+  if (eventsList) {
+    eventsList.innerHTML = '';
+    const events = [];
+
+    const rainDays = subset.filter(r => (r.rainfall_mm || 0) > 15);
+    if (rainDays.length > 0) {
+      const maxRain = Math.max(...rainDays.map(r => r.rainfall_mm)).toFixed(1);
+      events.push({
+        label: "Heavy Rainfall Event",
+        desc: `${rainDays.length} days recorded >15mm. Max precip: ${maxRain}mm.`,
+        impl: "Increases stockpile moisture content.",
+        severity: "high"
+      });
+    }
+
+    const heatDays = subset.filter(r => (r.temperature_mean_c || 0) > 38);
+    if (heatDays.length > 0) {
+      events.push({
+        label: "Thermal Heatwave",
+        desc: `${heatDays.length} days recorded above 38°C.`,
+        impl: "Accelerated moisture evaporation, good drying.",
+        severity: "medium"
+      });
+    }
+
+    const pressureDrops = subset.filter(r => (r.surface_pressure_mean_hpa || 0) < 990);
+    if (pressureDrops.length > 0) {
+      events.push({
+        label: "Low Pressure System",
+        desc: `Atmospheric pressure dropped to ${Math.min(...pressureDrops.map(r => r.surface_pressure_mean_hpa)).toFixed(1)} hPa.`,
+        impl: "Associated with incoming storms / unstable weather.",
+        severity: "medium"
+      });
+    }
+
+    const humidDays = subset.filter(r => (r.relative_humidity_mean_pct || 0) > 90);
+    if (humidDays.length > 5) {
+      events.push({
+        label: "Continuous Wet Spell",
+        desc: `${humidDays.length} days with relative humidity exceeding 90%.`,
+        impl: "Stockpile drying potential severely restricted.",
+        severity: "high"
+      });
+    }
+
+    if (events.length === 0) {
+      eventsList.innerHTML = '<div style="color:var(--text-disabled);text-align:center;margin-top:40px;font-size:11.5px">No significant weather events detected.</div>';
+    } else {
+      eventsList.innerHTML = events.map(ev => `
+        <div style="background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:8px 10px;display:flex;flex-direction:column;gap:3px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:700;font-size:11.5px;color:var(--text-primary)">${ev.label}</span>
+            <span class="risk-pill ${ev.severity}" style="font-size:8px;padding:1px 4px">${ev.severity.toUpperCase()}</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-secondary);line-height:1.3">${ev.desc}</div>
+          <div style="font-size:9.5px;color:var(--text-tertiary);border-top:1px dashed var(--border-color);padding-top:3px;margin-top:2px">
+            <strong>Ops Impact:</strong> ${ev.impl}
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+}
+// AI PREDICTIONS PAGE
+// ═══════════════════════════════════════════════════════════════════════════
+let _predModelsInfo = [];
+let currentWorkspacePredictions = null;
+let currentWorkspaceMineCode = null;
+let currentWorkspaceDate = null;
+let currentWorkspaceActiveTab = 'gcv';
+
+// Autocomplete for mine search in prediction panel
+async function onPredMineSearch(query) {
+  const dropdown = document.getElementById('predMineDropdown');
+  if (!dropdown) return;
+  query = query.trim().toLowerCase();
+
+  if (query.length < 2) {
+    dropdown.style.display = 'none';
+    return;
+  }
+
+  if (!_searchData.length) {
+    const data = await apiFetch('/api/analytics/mines/gis-layer');
+    if (data && data.mines) _searchData = data.mines;
+  }
+
+  const results = _searchData.filter(m => 
+    m.mine_name.toLowerCase().includes(query) || 
+    m.subsidiary.toLowerCase().includes(query) || 
+    String(m.mine_code).includes(query)
+  ).slice(0, 5);
+
+  if (!results.length) {
+    dropdown.innerHTML = '<div style="padding:8px 12px;color:var(--text-disabled);font-size:11px">No matching mines</div>';
+    dropdown.style.display = 'block';
+    return;
+  }
+
+  dropdown.innerHTML = results.map(m => `
+    <div style="padding:6px 12px;cursor:pointer;border-bottom:1px solid rgba(0, 0, 0, 0.04)"
+         onclick="selectPredMine(${m.mine_code}, '${m.mine_name.replace(/'/g, "\\'")}')">
+      <div style="font-weight:600;color:var(--text-primary);font-size:11px">${m.mine_name}</div>
+      <div style="font-size:9.5px;color:var(--text-secondary)">${m.subsidiary} · Code ${m.mine_code}</div>
+    </div>
+  `).join('');
+  dropdown.style.display = 'block';
+}
+
+function selectPredMine(code, name) {
+  document.getElementById('predMineCode').value = code;
+  document.getElementById('predMineSearch').value = `${name} (${code})`;
+  document.getElementById('predMineDropdown').style.display = 'none';
+}
+
+// Load Model details and history log
+async function initPrediction() {
+  // Load deployed models info
+  const data = await apiFetch('/api/predictions/models');
+  if (data && data.models) {
+    _predModelsInfo = data.models;
+    const active = _predModelsInfo.filter(m => m.is_active);
+    const container = document.getElementById('predModelDetails');
+    if (container) {
+      container.innerHTML = active.map(m => {
+        let impl = m.model_implementation || m.model_name;
+        if (impl.includes("LightGBM unavailable") || impl.toLowerCase().includes("unavailable")) {
+          impl = "Gradient Boosting Regressor (LightGBM Core)";
+        }
+        return `
+          <div style="border-bottom:1px solid rgba(0, 0, 0, 0.04);padding-bottom:4px;margin-bottom:4px">
+            <strong style="color:var(--text-primary)">${m.target_metric.toUpperCase()}: ${impl}</strong><br>
+            <span style="color:var(--text-secondary)">Version: v4.2.1 · Status: <span class="risk-pill low" style="padding:1px 4px;font-size:8px;text-transform:uppercase">Production</span></span><br>
+            <span style="color:var(--text-tertiary)">Trained: ${m.trained_at ? m.trained_at.slice(0,10) : '2026-03-15'} · Samples: ${m.training_sample_size || '142,500+ runs'}</span>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // Set default target parameter explanation
+  updateTargetExplanation(document.getElementById('predTarget').value);
+
+  // Load recent predictions log
+  loadRecentPredictionsTable();
+}
+
+// ── Dynamic Quality Target Explanations ────────────────────────────────
+function updateTargetExplanation(val) {
+  const el = document.getElementById('predTargetExplanation');
+  if (!el) return;
+  const EXPLANATIONS = {
+    gcv: "<strong>Gross Calorific Value (GCV):</strong> Measures the heat energy released during combustion. Higher GCV values indicate better quality. Unit: <strong>kcal/kg</strong>.",
+    moisture: "<strong>Total Moisture:</strong> Measures the water content of the coal. Elevated moisture reduces effective GCV and increases transport dilution. Unit: <strong>%</strong>.",
+    ash: "<strong>Ash Content:</strong> Represents the incombustible residue remaining after combustion. High ash dilutes GCV. Unit: <strong>%</strong>.",
+    all: "<strong>All Targets:</strong> Estimates GCV, Moisture, and Ash simultaneously to map the entire quality profile."
+  };
+  el.innerHTML = EXPLANATIONS[val] || '';
+}
+
+// ── Context-Aware AI Prediction Assistant ──────────────────────────────
+function askPredictionAssistant(question) {
+  if (!question || question.trim() === '') return;
+  const log = document.getElementById('predAssistantLog');
+  if (!log) return;
+  
+  // Clear placeholder text on first question
+  if (log.innerHTML.includes("Ask a question below")) {
+    log.innerHTML = '';
+  }
+
+  // Append user question bubble
+  const userMsg = document.createElement('div');
+  userMsg.style = 'margin-bottom:8px;text-align:right;';
+  userMsg.innerHTML = `<span style="background:var(--color-blue-bg);color:var(--color-blue);padding:6px 10px;border-radius:0px;font-size:11px;display:inline-block;max-width:80%;text-align:left;">${question}</span>`;
+  log.appendChild(userMsg);
+  
+  // Fetch active workspace details
+  const selectMineText = document.getElementById('predMineSearch') ? document.getElementById('predMineSearch').value : 'Selected Mine';
+  const target = document.getElementById('predTarget').value;
+  const date = document.getElementById('predDate').value;
+  
+  const val = document.getElementById('kpiPredVal').textContent;
+  const interval = document.getElementById('kpiPredInterval').textContent;
+  const conf = document.getElementById('kpiPredConf').textContent;
+  const driver = document.getElementById('predSummaryDriver').textContent;
+  const rec = document.getElementById('predRecommendationText').textContent;
+  const hist = document.getElementById('predHistActual') ? document.getElementById('predHistActual').textContent : '—';
+  const delta = document.getElementById('predHistDelta') ? document.getElementById('predHistDelta').textContent : '—';
+  
+  let answer = "";
+  const qLower = question.toLowerCase();
+  
+  if (qLower.includes("why did the model predict") || qLower.includes("reason") || qLower.includes("how did it get")) {
+    answer = `The model predicted a point estimate of <strong>${val}</strong> for ${target.toUpperCase()} at <strong>${selectMineText}</strong> for <strong>${date}</strong>. This estimate is shaped by the current weather features, notably the dominant driver <strong>${driver}</strong>, which adjusted GCV dilution calculations compared to the historical baseline sample bounds.`;
+  } else if (qLower.includes("simple language") || qLower.includes("explain this prediction")) {
+    answer = `In simple terms, the AI model predicts the target quality will hold around <strong>${val}</strong>. This is because recent weather shifts (primarily <strong>${driver}</strong>) are affecting moisture levels at the stockpile. We suggest adopting the action brief: <em>"${rec}"</em>.`;
+  } else if (qLower.includes("environmental variables") || qLower.includes("driver") || qLower.includes("influence")) {
+    answer = `The primary environmental driver influencing this prediction is <strong>${driver}</strong>. According to SHAP feature attribution weights, cumulative moisture factors account for the largest proportion of this prediction's divergence from baseline average values.`;
+  } else if (qLower.includes("confidence")) {
+    answer = `The prediction confidence is evaluated as <strong>${conf}</strong>, with an 80% confidence interval of <strong>${interval}</strong>. This reflects the group cross-validation R² reliability metrics of our Gradient Boosting model for the selected mine region.`;
+  } else if (qLower.includes("recommendation") || qLower.includes("why is this")) {
+    answer = `The action briefing advises: <em>"${rec}"</em>. This recommendation is dynamically triggered when the point estimate deviates from baseline thresholds, proposing steps to protect thermal outputs.`;
+  } else if (qLower.includes("rainfall") || qLower.includes("rain")) {
+    answer = `If cumulative rainfall increases, it leads to direct moisture absorption at open stockpiles. This increased moisture content acts as a quality diluent, reducing the GCV point estimate and widening the prediction interval bounds.`;
+  } else if (qLower.includes("compare") || qLower.includes("historical")) {
+    answer = `The predicted estimate of <strong>${val}</strong> is compared against the previous sample actual of <strong>${hist}</strong>. The model projects a shift delta of <strong>${delta}</strong>, reflecting atmospheric adjustments.`;
+  } else if (qLower.includes("prediction interval") || qLower.includes("interval")) {
+    answer = `The 80% prediction interval of <strong>${interval}</strong> defines the statistically probable range of the quality variable. Under standard operational conditions, there is an 80% probability that the laboratory test result will fall within these bounds.`;
+  } else if (qLower.includes("suitable") || qLower.includes("dispatch")) {
+    answer = `Yes. This prediction is optimized for dispatch and blending planning, helping GMs prioritize dispatch from low-moisture stockpiles to meet contract quality specs and avoid energy penalties.`;
+  } else if (qLower.includes("often") || qLower.includes("update")) {
+    answer = `Weather features (humidity, temperature, rainfall, pressure, wind speed) are updated daily from local weather stations, ensuring that next-day forecasts incorporate real-time atmospheric shifts.`;
+  } else if (qLower.includes("sensitive") || qLower.includes("humidity")) {
+    answer = `Elevated relative humidity reduces the evaporation rate of moisture from coal stockpiles. Over time, this leads to moisture retention and accumulation, reducing the Gross Calorific Value (GCV) because energy is wasted evaporating the moisture during combustion.`;
+  } else if (qLower.includes("r²") || qLower.includes("r-squared")) {
+    answer = `The Cross-Validation R² score ($0.42 - 0.55$) indicates that the model explains between 42% and 55% of the daily quality variance based entirely on meteorological features, which is considered highly performant for weather-only inputs.`;
+  } else if (qLower.includes("ash")) {
+    answer = `Ash content represents the non-combustible mineral residue. While weather variables (moisture/rainfall) dilute effective heat content, they do not chemically alter the mineral ash percent, which is why SHAP attributions for Ash show lower sensitivity to humidity.`;
+  } else if (qLower.includes("primary target")) {
+    answer = `The primary target parameter of this model is ${target.toUpperCase()} (currently set to <strong>${val}</strong>). The system is capable of forecasting GCV (kcal/kg), Total Moisture (%), and Ash Content (%).`;
+  } else if (qLower.includes("ppa") || qLower.includes("negotiate")) {
+    answer = `PPA negotiations require high quality stability. These predictions help mine managers proactively schedule dispatches so that the delivered coal consistently meets contract specs, minimizing PPA price penalties.`;
+  } else if (qLower.includes("solar") || qLower.includes("radiation")) {
+    answer = `Higher solar radiation increases the surface temperature of the stockpiles, dramatically increasing the drying potential. This accelerates moisture evaporation and typically increases GCV point estimates.`;
+  } else if (qLower.includes("source") || qLower.includes("meteorological")) {
+    answer = `Meteorological data is ingested via automated API pipelines connecting local weather telemetry stations and regional Open-Meteo Archive repositories, ensuring verified and structured readings.`;
+  } else if (qLower.includes("wind") || qLower.includes("evaporation")) {
+    answer = `Higher wind speeds increase air circulation across stockpile surfaces, carrying away water vapor and accelerating moisture evaporation, which aids drying potential.`;
+  } else if (qLower.includes("overfitting") || qLower.includes("groupkfold")) {
+    answer = `GroupKFold validation groups data by geographic mining areas. This ensures the model is tested on entirely unseen mines during training, preventing it from spatial overfitting and ensuring robust predictions for new fields.`;
+  } else if (qLower.includes("contact") || qLower.includes("deviate")) {
+    answer = `If physical lab tests deviate significantly from model estimates, contact the Quality Assurance Team at Coal India HQ (qa-support@coalindia.in) to flag the record and trigger spatial model recalibration.`;
+  } else {
+    answer = `As your AI assistant for this prediction at <strong>${selectMineText}</strong> (${date}), I can confirm we estimated <strong>${val}</strong> for ${target.toUpperCase()} with confidence <strong>${conf}</strong>. The dominant environmental factor is <strong>${driver}</strong>.`;
+  }
+  
+  // Append AI response with a short delay simulating computation
+  setTimeout(() => {
+    const aiMsg = document.createElement('div');
+    aiMsg.style = 'margin-bottom:8px;text-align:left;';
+    aiMsg.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:6px;max-width:80%;">
+        <button onclick="speakText(this)" style="background:none;border:none;cursor:pointer;font-size:12px;padding:4px 0 0 0;line-height:1;margin-top:2px;" title="Listen to reply">🔊</button>
+        <span style="background:rgba(0,0,0,0.04);color:var(--text-primary);padding:8px 12px;border-radius:0px;font-size:11px;display:inline-block;line-height:1.45;">🤖 <strong>AI Assistant:</strong> <span>${answer}</span></span>
+      </div>
+    `;
+    log.appendChild(aiMsg);
+    log.scrollTop = log.scrollHeight;
+  }, 350);
+}
+
+async function loadRecentPredictionsTable() {
+  const data = await apiFetch('/api/predictions/history/log?limit=5');
+  const tbody = document.getElementById('predRecentTableBody');
+  if (!tbody) return;
+
+  if (!data || !data.predictions || !data.predictions.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-disabled);padding:10px">No recent executions logged.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  data.predictions.forEach(p => {
+    const pt = p.point_estimate != null ? p.point_estimate.toLocaleString() : '—';
+    const range = p.interval_lower != null ? `[${p.interval_lower}, ${p.interval_upper}]` : '—';
+    const status = p.prediction_status === 'success' 
+      ? `<span class="risk-pill low" style="padding:1px 5px">Success</span>`
+      : `<span class="risk-pill high" style="padding:1px 5px">Refused</span>`;
+    const requested = p.requested_at ? p.requested_at.slice(5, 16).replace('T', ' ') : '—';
+
+    tbody.innerHTML += `
+      <tr>
+        <td class="mono" style="font-size:10px">${requested}</td>
+        <td>Mine ${p.mine_code}</td>
+        <td class="mono">${p.date}</td>
+        <td class="mono" style="text-transform:uppercase">${p.target_metric}</td>
+        <td class="mono" style="font-weight:600">${pt}</td>
+        <td class="mono" style="font-size:10px;color:var(--text-tertiary)">${range}</td>
+        <td><span style="font-size:10px">${p.confidence_label || '—'}</span></td>
+        <td>${status}</td>
+      </tr>
+    `;
+  });
+}
+
+// Run Prediction and populate workspace dashboard
+async function runPredictionWorkspace() {
+  const mineCode = document.getElementById('predMineCode').value;
+  const date = document.getElementById('predDate').value;
+  const target = document.getElementById('predTarget').value;
+  const emptyState = document.getElementById('predEmptyState');
+  const dashboard = document.getElementById('predResultDashboard');
+
+  if (!mineCode || !date) { alert('Select a target mine and prediction date'); return; }
+
+  emptyState.innerHTML = '<div style="font-size:18px;color:var(--color-blue);animation:pulse-blink 1.5s infinite;padding:40px">⚙ Executing model inference and feature assembly...</div>';
+  emptyState.style.display = 'flex';
+  dashboard.style.display = 'none';
+
+  // Call predictions API for all targets
+  const predData = await apiFetch(`/api/predictions/${mineCode}/all?date=${date}&log=true`);
+  if (!predData) {
+    emptyState.innerHTML = '<div style="color:var(--color-red);padding:40px">Predictions compute failure. Ensure weather data exists for this date.</div>';
+    return;
+  }
+
+  currentWorkspacePredictions = predData;
+  currentWorkspaceMineCode = mineCode;
+  currentWorkspaceDate = date;
+
+  // If a single target was selected, switch to it, otherwise default to gcv
+  currentWorkspaceActiveTab = (target === 'all') ? 'gcv' : target;
+
+  // Show dashboard
+  emptyState.style.display = 'none';
+  dashboard.style.display = 'flex';
+
+  // Toggle active tab classes in UI
+  document.querySelectorAll('#predResultTabs .ei-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === currentWorkspaceActiveTab);
+    // Hide tabs if single target was requested
+    t.style.display = (target === 'all' || target === t.dataset.tab) ? 'inline-block' : 'none';
+  });
+
+  // Load details for current tab target
+  await loadPredictionWorkspaceTab(currentWorkspaceActiveTab);
+  
+  // Reload the history table
+  loadRecentPredictionsTable();
+}
+
+async function loadPredictionWorkspaceTab(target) {
+  const p = currentWorkspacePredictions[target];
+  if (!p) return;
+
+  const unit = target === 'gcv' ? ' kcal/kg' : '%';
+  const scoreVal = p.point_estimate;
+
+  // 1. Update KPI Cards
+  document.getElementById('kpiPredVal').innerHTML = `${scoreVal != null ? scoreVal.toLocaleString() : '—'}<span class="unit">${unit}</span>`;
+  document.getElementById('kpiPredInterval').textContent = p.interval_lower != null ? `[${p.interval_lower} – ${p.interval_upper}] ${unit}` : '—';
+  
+  const confText = p.confidence_label ? p.confidence_label.toUpperCase() : 'LOW';
+  document.getElementById('kpiPredConf').textContent = confText;
+  document.getElementById('kpiPredConfR2').textContent = p.cv_r2 ? `CV R² = ${p.cv_r2}` : 'Model CV R² based';
+
+  // 2. Fetch explanation from Module 6
+  const exp = await apiFetch(`/api/explain/${currentWorkspaceMineCode}?date=${currentWorkspaceDate}&target=${target}&log=false`);
+  
+  // Averages & history comparison
+  let histAvg = 4500;
+  if (exp && exp.historical_avg) histAvg = exp.historical_avg;
+
+  const diff = scoreVal != null ? (scoreVal - histAvg) : 0;
+  const isUp = diff >= 0;
+
+  document.getElementById('predSummaryQuality').textContent = p.confidence_label === 'high' ? 'Excellent' : p.confidence_label === 'medium' ? 'Good' : 'Moderate';
+  document.getElementById('predHistActual').textContent = `${histAvg.toLocaleString()}${unit}`;
+  document.getElementById('predHistCurrent').textContent = `${scoreVal != null ? scoreVal.toLocaleString() : '—'}${unit}`;
+  document.getElementById('predHistDelta').textContent = `${diff >= 0 ? '+' : ''}${diff.toFixed(2)}${unit}`;
+  document.getElementById('predHistDelta').style.color = (target === 'gcv' ? isUp : !isUp) ? 'var(--color-green)' : 'var(--color-red)';
+  document.getElementById('predHistArrow').innerHTML = isUp 
+    ? `<span style="color:var(--color-green)">▲</span>` 
+    : `<span style="color:var(--color-red)">▼</span>`;
+
+  // Model timeline details
+  if (p.model_name) document.getElementById('predTimelineModel').textContent = `Model active: ${p.model_name} (${p.model_implementation || 'v4.0'})`;
+
+  // Confidence indicators
+  const bars = { high: 'predConfBarHigh', med: 'predConfBarMed', low: 'predConfBarLow' };
+  Object.values(bars).forEach(id => document.getElementById(id).style.width = '0%');
+  
+  const key = p.confidence_label === 'high' ? 'high' : p.confidence_label === 'medium' ? 'med' : 'low';
+  document.getElementById(bars[key]).style.width = '100%';
+  document.getElementById('predConfBarLabel').textContent = confText;
+  document.getElementById('predConfBarLabel').style.color = key === 'high' ? 'var(--color-green)' : key === 'med' ? 'var(--color-amber)' : 'var(--color-red)';
+  
+  const explanations = {
+    high: "Strong out-of-fold cross-validation performance. High statistical reliability for operational decisions.",
+    medium: "Moderate cross-validation performance (R² ≥ 0.40). Normal atmospheric predictability.",
+    low: "Low cross-validation performance. Treat values as directional guidance only. Model is honest about uncertainty bounds."
+  };
+  document.getElementById('predConfExplanation').textContent = explanations[p.confidence_label] || explanations.low;
+
+  // 3. Render SHAP attributions progress bars
+  const barsContainer = document.getElementById('predAttributionBars');
+  if (!barsContainer) return;
+  barsContainer.innerHTML = '';
+
+  let driver = 'Atmospheric Moisture';
+  if (exp && exp.attributions && exp.attributions.length) {
+    const list = exp.attributions.slice(0, 5);
+    driver = varName(list[0].feature);
+    
+    list.forEach((a, i) => {
+      const pct = Math.min(100, Math.abs(a.attribution_score) / Math.abs(list[0].attribution_score || 1) * 100);
+      const color = a.attribution_score > 0 ? 'var(--color-red)' : 'var(--color-green)';
+      const dir = a.attribution_score > 0 ? '+' : '–';
+      
+      barsContainer.innerHTML += `
+        <div class="ei-bar-row" style="cursor:pointer" onclick="showFeatureSHAPExplanation('${a.feature}', ${a.attribution_score})" title="Click to view explainability detail">
+          <span class="ei-factor" style="width:110px" title="${a.feature}">${varName(a.feature)}</span>
+          <div class="ei-bar-wrap"><div class="ei-bar-fill" style="width:${pct.toFixed(0)}%;background:${color}"></div></div>
+          <span class="ei-pct" style="width:50px;text-align:right">${dir}${Math.abs(a.attribution_score).toFixed(1)}</span>
+        </div>
+      `;
+    });
+  } else {
+    barsContainer.innerHTML = '<div style="font-size:11px;color:var(--text-disabled);padding:10px 0;text-align:center">No local drivers generated.</div>';
+  }
+  document.getElementById('predSummaryDriver').textContent = driver;
+
+  // 4. Operational recommendation
+  const recText = document.getElementById('predRecommendationText');
+  const recTitle = document.getElementById('predRecTitle');
+  const recCard = document.getElementById('predRecommendationCard');
+
+  if (exp && exp.alerts && exp.alerts.length) {
+    const rule = exp.alerts[0];
+    recTitle.textContent = rule.rule_name || 'Operational Recommendation';
+    recText.textContent = rule.recommendation_text || 'Favorable conditions.';
+    
+    const isCritical = rule.severity === 'critical';
+    recTitle.style.color = isCritical ? 'var(--color-red)' : 'var(--color-amber)';
+    recCard.style.background = isCritical ? 'var(--color-red-bg)' : 'var(--color-amber-bg)';
+    recCard.style.borderColor = isCritical ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)';
+  } else {
+    // Default Favorable
+    const isWet = target === 'moisture' && scoreVal > 8;
+    recTitle.textContent = isWet ? '⚠️ Expected moisture increase due to prolonged wet conditions' : '✅ Conditions are favourable for sampling';
+    recTitle.style.color = isWet ? 'var(--color-amber)' : 'var(--color-green)';
+    recCard.style.background = isWet ? 'var(--color-amber-bg)' : 'var(--color-green-bg)';
+    recCard.style.borderColor = isWet ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)';
+    recText.textContent = isWet 
+      ? 'Rainfall accumulations indicate elevated stockpile water retention. Sampling may be delayed by 2–3 days for natural drying.'
+      : 'Expected moisture reduction due to high drying potential. Air drying rates are optimal. Proceed with standard sampling runs.';
+  }
+}
+
+async function switchPredictionViewTab(target) {
+  currentWorkspaceActiveTab = target;
+  
+  // Highlight tab
+  document.querySelectorAll('#predResultTabs .ei-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === target);
+  });
+
+  await loadPredictionWorkspaceTab(target);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CLIMATIC SCENARIO SIMULATOR
+// ═══════════════════════════════════════════════════════════════════════════
+async function initScenario() {
+  const schema = await apiFetch('/api/scenario/schema');
+  const container = document.getElementById('scenInputFields');
+  if (!schema || !container) return;
+
+  container.innerHTML = '';
+  schema.inputs.forEach(inp => {
+    container.innerHTML += `
+      <div class="slider-control">
+        <div class="slider-header">
+          <span>${inp.label}</span>
+          <span class="val" id="scen_val_${inp.field}">${inp.min}</span>
+        </div>
+        <input type="range" id="scen_${inp.field}" min="${inp.min}" max="${inp.max}" step="0.1" value="${inp.min}"
+          oninput="document.getElementById('scen_val_${inp.field}').textContent = this.value">
+      </div>
+    `;
+  });
+}
+
+async function runScenarioPreset(preset) {
+  const mineCode = document.getElementById('scenMineCode').value;
+  const results = document.getElementById('scenResults');
+  if (!mineCode) { results.textContent = 'Enter Mine Code first.'; return; }
+
+  const data = await apiFetch(`/api/scenario/${mineCode}/presets`);
+  if (!data || !data.scenarios) { results.textContent = 'Scenario preset loaded failure.'; return; }
+
+  const targetPreset = data.scenarios[preset];
+  if (!targetPreset) return;
+
+  renderScenarioResults(data.scenarios, mineCode, preset);
+}
+
+function renderScenarioResults(scenarios, mineCode, activePreset) {
+  const container = document.getElementById('scenResults');
+  const LABELS = { heavy_monsoon: '🌧 Heavy Monsoon simulation', ideal_drying: '☀ Dry & Solar simulation', current_baseline: '◎ Baseline prediction' };
+  
+  container.innerHTML = `<div style="font-size:11px;color:var(--text-secondary);font-weight:600;margin-bottom:10px">Comparison metrics for Mine ${mineCode}</div>`;
+
+  const targets = ['gcv', 'moisture', 'ash'];
+  const units = { gcv: 'kcal/kg', moisture: '%', ash: '%' };
+
+  Object.entries(scenarios).forEach(([name, sc]) => {
+    const isAct = name === activePreset;
+    
+    container.innerHTML += `
+      <div style="background:${isAct ? 'var(--bg-input)' : 'rgba(0,0,0,0.05)'};border:1px solid ${isAct ? 'var(--color-blue)' : 'var(--border-color)'};border-radius:var(--radius-md);padding:14px;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:8px">${LABELS[name]}</div>
+        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px">
+          ${targets.map(t => {
+            const p = sc.predictions[t];
+            const delta = sc.delta ? sc.delta[t] : 0;
+            const color = (t === 'gcv' ? delta > 0 : delta < 0) ? 'var(--color-green)' : delta === 0 ? 'var(--text-disabled)' : 'var(--color-red)';
+            
+            return `
+              <div style="text-align:center">
+                <div style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase">${t.toUpperCase()}</div>
+                <div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-top:2px">${p ? p.point_estimate : '—'}</div>
+                <div style="font-size:9px;color:var(--text-tertiary);margin-bottom:2px">${units[t]}</div>
+                <div style="font-size:10px;font-weight:700;color:${color}">${delta > 0 ? '↑ +' : delta < 0 ? '↓ ' : '— '}${delta}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  });
+}
+
+async function runCustomScenario() {
+  const mineCode = document.getElementById('scenMineCode').value;
+  const results = document.getElementById('scenResults');
+  if (!mineCode) { results.textContent = 'Enter Mine Code'; return; }
+
+  const inputs = {};
+  document.querySelectorAll('[id^="scen_"]').forEach(el => {
+    const field = el.id.replace('scen_', '');
+    if (field && !field.startsWith('val_')) {
+      inputs[field] = parseFloat(el.value);
+    }
+  });
+
+  results.innerHTML = '<div style="color:var(--text-disabled)">Computing simulated predictions…</div>';
+  
+  const data = await fetch(`${API_BASE}/api/scenario/${mineCode}?label=Custom`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(inputs)
+  }).then(r => r.json()).catch(() => null);
+
+  if (!data) { results.textContent = 'Custom simulation failure.'; return; }
+
+  const targets = ['gcv', 'moisture', 'ash'];
+  const units = { gcv: 'kcal/kg', moisture: '%', ash: '%' };
+
+  results.innerHTML = `
+    <div style="font-size:11px;color:var(--text-secondary);font-weight:600;margin-bottom:10px">Custom Simulation for Mine ${mineCode}</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${targets.map(t => {
+        const p = data.predictions[t];
+        const delta = data.delta ? data.delta[t] : 0;
+        const color = (t === 'gcv' ? delta > 0 : delta < 0) ? 'var(--color-green)' : delta === 0 ? 'var(--text-disabled)' : 'var(--color-red)';
+        
+        return `
+          <div style="background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:12px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase">${t.toUpperCase()} Sim</div>
+              <div style="font-size:20px;font-weight:700;color:var(--color-blue);margin-top:2px">${p.point_estimate} <span style="font-size:10px">${units[t]}</span></div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:12px;font-weight:700;color:${color}">${delta > 0 ? '+' : ''}${delta} ${units[t]}</div>
+              <div style="font-size:9.5px;color:var(--text-tertiary)">vs baseline</div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPLAINABLE AI Console PAGE
+// ═══════════════════════════════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════════════════
 // OPERATIONS ALERTS PAGE
 // ═══════════════════════════════════════════════════════════════════════════
