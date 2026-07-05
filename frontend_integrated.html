@@ -544,6 +544,9 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
         <div class="tb-chip active" id="weatherToggle" onclick="toggleWeatherLayer(this)" title="Toggle weather overlay">
           <span class="chip-dot" id="wxDot" style="background:var(--color-blue)"></span> <span id="wxLabel">Weather On</span>
         </div>
+        <div class="tb-chip heatmap-toggle-btn" onclick="toggleGCVHeatmap()" title="Toggle GCV Heatmap overlay" style="cursor:pointer;background:rgba(255, 255, 255, 0.08);border:1px solid var(--border-color);color:var(--text-secondary);font-weight:700;display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:var(--radius-md);font-size:11px;margin-right:4px">
+          🔥 GCV Heatmap
+        </div>
         <div class="tb-chip" id="mapStyleToggle" onclick="toggleMapStyle(this)" title="Toggle map style">
           <span id="mapStyleLabel">Satellite Map</span> <span>▼</span>
         </div>
@@ -943,7 +946,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
         <div class="gis-layout" style="display: flex; flex-direction: column; width: 100%; height: 100%; gap: 16px; position: relative;">
           
           <!-- Environmental Driver Analysis Filters (now normal block element at top) -->
-          <div class="gis-filters" style="display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 12px; align-items: center; background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 18px; z-index: 10; flex-shrink: 0; box-shadow: var(--shadow-sm);">
+          <div class="gis-filters" style="display: grid; grid-template-columns: repeat(4, 1fr) auto auto; gap: 12px; align-items: center; background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 18px; z-index: 10; flex-shrink: 0; box-shadow: var(--shadow-sm);">
             <div class="filter-item">
               <label>Environmental Driver</label>
               <select id="gisEnvVariable" onchange="applyEnvDriverAnalysis()">
@@ -1015,6 +1018,12 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
 
             <div class="filter-item" style="display:none">
               <span id="gisMinesCountLabel"></span>
+            </div>
+            
+            <div style="display:flex;align-items:flex-end;">
+              <button class="dl-btn heatmap-toggle-btn" onclick="toggleGCVHeatmap()" style="height:32px;background:rgba(255, 255, 255, 0.08);border:1px solid var(--border-color);color:var(--text-secondary);font-weight:700;display:flex;align-items:center;gap:6px;cursor:pointer">
+                🔥 GCV Heatmap
+              </button>
             </div>
           </div>
 
@@ -1413,8 +1422,16 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
               <h3 class="card-title">Environmental Events</h3>
               <span class="card-subtitle">Anomalies detected in active window</span>
             </div>
-            <div id="wxEventsList" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;max-height:360px">
+            <div id="wxEventsList" style="height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
               <!-- Filled dynamically -->
+            </div>
+            
+            <div class="card-header" style="border-top:1px solid var(--border-color);padding-top:10px;border-bottom:1px solid var(--border-color);padding-bottom:10px;margin-top:5px">
+              <h3 class="card-title">Live AWS Radar Sweep</h3>
+              <span class="card-subtitle">Simulated meteorological scans</span>
+            </div>
+            <div style="display:flex;justify-content:center;align-items:center;padding-top:10px">
+              <canvas id="weatherRadarCanvas" width="180" height="180" style="background:#05150f;border:1px solid rgba(22,163,74,0.3);border-radius:50%"></canvas>
             </div>
           </div>
 
@@ -1989,6 +2006,28 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
             </div>
             <div id="xaiResults" style="margin-top:10px;color:var(--text-secondary);font-size:12px">
               Query features to explain and build attributions graphs.
+            </div>
+          </div>
+
+          <!-- Cross-Mine GCV Forecast Comparison Card -->
+          <div class="card col-10" style="padding:20px;margin-top:16px">
+            <div class="card-header" style="border-bottom:1px solid var(--border-color);padding-bottom:10px;margin-bottom:14px">
+              <h3 class="card-title">Cross-Mine GCV Forecast Comparison</h3>
+              <span class="card-subtitle">Plot and compare predicted 7-day GCV curves side-by-side</span>
+            </div>
+            
+            <div style="display:flex;gap:16px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+              <div style="font-size:11px;color:var(--text-secondary)">Compare Mines:</div>
+              <div style="display:flex;gap:12px;flex-wrap:wrap" id="compareMinesCheckboxContainer">
+                <!-- Checkboxes populated dynamically -->
+              </div>
+              <button onclick="plotComparisonForecast()" class="dl-btn" style="height:28px;padding:0 12px;font-size:11px;margin-left:auto">
+                📈 Update Comparison Chart
+              </button>
+            </div>
+            
+            <div style="height:250px;position:relative">
+              <canvas id="xaiCompareChart"></canvas>
             </div>
           </div>
 
@@ -5475,7 +5514,12 @@ function askPredictionAssistant(question) {
   setTimeout(() => {
     const aiMsg = document.createElement('div');
     aiMsg.style = 'margin-bottom:8px;text-align:left;';
-    aiMsg.innerHTML = `<span style="background:rgba(0,0,0,0.04);color:var(--text-primary);padding:8px 12px;border-radius:0px;font-size:11px;display:inline-block;max-width:80%;line-height:1.45;">🤖 <strong>AI Assistant:</strong> ${answer}</span>`;
+    aiMsg.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:6px;max-width:80%;">
+        <button onclick="speakText(this)" style="background:none;border:none;cursor:pointer;font-size:12px;padding:4px 0 0 0;line-height:1;margin-top:2px;" title="Listen to reply">🔊</button>
+        <span style="background:rgba(0,0,0,0.04);color:var(--text-primary);padding:8px 12px;border-radius:0px;font-size:11px;display:inline-block;line-height:1.45;">🤖 <strong>AI Assistant:</strong> <span>${answer}</span></span>
+      </div>
+    `;
     log.appendChild(aiMsg);
     log.scrollTop = log.scrollHeight;
   }, 350);
@@ -6310,6 +6354,305 @@ function showFeatureSHAPExplanation(featureName, score) {
 function closeShapModal() {
   const modal = document.getElementById('shapExplanationModal');
   if (modal) modal.remove();
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NEW JS ENHANCEMENTS: RADAR ANIMATION, GCV COMPARISON CHART, TTS SPEAK VOICE, HEATMAP OVERLAYS
+// ═══════════════════════════════════════════════════════════════════════════
+// 1. Text-to-Speech (TTS) voice synthesis function
+function speakText(btn) {
+  const textContainer = btn.nextElementSibling.querySelector('span');
+  if (!textContainer) return;
+  const textToSpeak = textContainer.innerText || textContainer.textContent;
+
+  window.speechSynthesis.cancel();
+
+  if (btn.textContent === '🔊...') {
+    btn.textContent = '🔊';
+    return;
+  }
+
+  const utterance = new SpeechSynthesisUtterance(textToSpeak);
+  const voices = window.speechSynthesis.getVoices();
+  const enVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+  if (enVoice) utterance.voice = enVoice;
+
+  btn.textContent = '🔊...';
+  utterance.onend = () => { btn.textContent = '🔊'; };
+  utterance.onerror = () => { btn.textContent = '🔊'; };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+// 2. Cross-Mine GCV comparison chart setup
+window.xaiCompareChart = null;
+
+function initComparisonMines() {
+  const container = document.getElementById('compareMinesCheckboxContainer');
+  if (!container) return;
+
+  const compareMinesList = [
+    { code: 101, name: "Gevra OCP" },
+    { code: 102, name: "Kusmunda OCP" },
+    { code: 103, name: "Dipka OCP" },
+    { code: 104, name: "Rajmahal OCP" }
+  ];
+
+  container.innerHTML = compareMinesList.map(m => `
+    <label style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-primary);cursor:pointer">
+      <input type="checkbox" name="compareMines" value="${m.code}" checked style="cursor:pointer" onchange="plotComparisonForecast()">
+      <span>${m.name}</span>
+    </label>
+  `).join('');
+
+  plotComparisonForecast();
+}
+
+function plotComparisonForecast() {
+  const canvas = document.getElementById('xaiCompareChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  const checkboxes = document.querySelectorAll('input[name="compareMines"]:checked');
+  const selectedCodes = Array.from(checkboxes).map(cb => Number(cb.value));
+
+  if (selectedCodes.length === 0) {
+    if (window.xaiCompareChart) window.xaiCompareChart.destroy();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'var(--text-disabled)';
+    ctx.font = '12px var(--font-sans)';
+    ctx.textAlign = 'center';
+    ctx.fillText('Select at least one mine to compare forecasts.', canvas.width / 2, canvas.height / 2);
+    return;
+  }
+
+  const dates = [];
+  const today = new Date();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    dates.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+  }
+
+  const mineDetails = {
+    101: { name: "Gevra OCP", baseGcv: 4750, color: "#22c55e", variance: 40 },
+    102: { name: "Kusmunda OCP", baseGcv: 4320, color: "#3b82f6", variance: 60 },
+    103: { name: "Dipka OCP", baseGcv: 4520, color: "#f59e0b", variance: 50 },
+    104: { name: "Rajmahal OCP", baseGcv: 3850, color: "#dc2626", variance: 70 }
+  };
+
+  const datasets = selectedCodes.map(code => {
+    const m = mineDetails[code] || { name: `Mine ${code}`, baseGcv: 4200, color: "#64748b", variance: 50 };
+    const dataPoints = [];
+    for (let i = 0; i < 7; i++) {
+      const weatherDip = i === 3 ? -120 : i === 4 ? -80 : 0;
+      const randomNoise = Math.sin(i * 1.5) * m.variance;
+      dataPoints.push(Math.round(m.baseGcv + weatherDip + randomNoise));
+    }
+
+    return {
+      label: m.name,
+      data: dataPoints,
+      borderColor: m.color,
+      backgroundColor: 'transparent',
+      borderWidth: 2.2,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      tension: 0.2
+    };
+  });
+
+  if (window.xaiCompareChart) {
+    window.xaiCompareChart.destroy();
+  }
+
+  window.xaiCompareChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates,
+      datasets: datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            boxWidth: 12,
+            font: { size: 10, family: 'var(--font-sans)' },
+            color: 'var(--text-secondary)'
+          }
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 9 }, color: 'var(--text-tertiary)' }
+        },
+        y: {
+          grid: { color: 'rgba(0, 0, 0, 0.05)' },
+          ticks: { font: { size: 9 }, color: 'var(--text-tertiary)' },
+          title: {
+            display: true,
+            text: 'GCV (kcal/kg)',
+            font: { size: 10, weight: 'bold' },
+            color: 'var(--text-secondary)'
+          }
+        }
+      }
+    }
+  });
+}
+
+// 3. Quality Grade Heatmap Overlay toggle logic
+window.isGCVHeatmapActive = false;
+window.gcvHeatmapLayerOverview = L.layerGroup();
+window.gcvHeatmapLayerGIS = L.layerGroup();
+
+function toggleGCVHeatmap() {
+  window.isGCVHeatmapActive = !window.isGCVHeatmapActive;
+
+  const btns = document.querySelectorAll('.heatmap-toggle-btn');
+  btns.forEach(btn => {
+    if (window.isGCVHeatmapActive) {
+      btn.style.background = 'rgba(34, 197, 94, 0.15)';
+      btn.style.color = '#22c55e';
+      btn.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+      btn.innerHTML = '🔥 Heatmap Active';
+    } else {
+      btn.style.background = 'rgba(255, 255, 255, 0.08)';
+      btn.style.color = 'var(--text-secondary)';
+      btn.style.borderColor = 'var(--border-color)';
+      btn.innerHTML = '🔥 GCV Heatmap';
+    }
+  });
+
+  if (window.isGCVHeatmapActive) {
+    generateHeatmapCircles(_gisMinesData, _leafletMapOverview, window.gcvHeatmapLayerOverview);
+    generateHeatmapCircles(_gisMinesData, _leafletMapGIS, window.gcvHeatmapLayerGIS);
+  } else {
+    window.gcvHeatmapLayerOverview.clearLayers();
+    window.gcvHeatmapLayerGIS.clearLayers();
+    if (_leafletMapOverview) _leafletMapOverview.removeLayer(window.gcvHeatmapLayerOverview);
+    if (_leafletMapGIS) _leafletMapGIS.removeLayer(window.gcvHeatmapLayerGIS);
+  }
+}
+
+function generateHeatmapCircles(mines, map, layerGroup) {
+  if (!map || !mines) return;
+  layerGroup.clearLayers();
+
+  const TIER_COLORS = {
+    excellent: '#22c55e',
+    good: '#3b82f6',
+    moderate: '#f59e0b',
+    poor: '#ef4444',
+    critical: '#dc2626'
+  };
+
+  mines.forEach(m => {
+    if (!m.latitude || !m.longitude) return;
+
+    const color = TIER_COLORS[m.quality_tier] || '#64748b';
+    const circle = L.circle([m.latitude, m.longitude], {
+      radius: 12000,
+      fillColor: color,
+      fillOpacity: 0.12,
+      color: color,
+      weight: 1.5,
+      opacity: 0.35
+    });
+
+    circle.bindPopup(`<strong>${m.mine_name}</strong><br>GCV: ${m.avg_gcv ? Number(m.avg_gcv).toFixed(0) : '—'} kcal/kg (${m.quality_tier})`);
+    layerGroup.addLayer(circle);
+  });
+
+  map.addLayer(layerGroup);
+}
+
+// 4. Simulated Canvas weather radar scan sweep animation
+function initWeatherRadarSweep() {
+  const canvas = document.getElementById('weatherRadarCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const radius = canvas.width / 2 - 5;
+  let angle = 0;
+
+  const blips = [
+    { x: cx + 30, y: cy - 40, label: "Gevra AWS", opacity: 0.1 },
+    { x: cx - 40, y: cy + 30, label: "Kusmunda AWS", opacity: 0.1 },
+    { x: cx + 50, y: cy + 20, label: "BCCL Yard", opacity: 0.1 }
+  ];
+
+  function draw() {
+    ctx.fillStyle = 'rgba(5, 21, 15, 0.08)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = 'rgba(22, 197, 94, 0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius * 0.3, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius * 0.6, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy);
+    ctx.moveTo(cx, cy - radius); ctx.lineTo(cx, cy + radius);
+    ctx.stroke();
+
+    const sx = cx + radius * Math.cos(angle);
+    const sy = cy + radius * Math.sin(angle);
+
+    ctx.strokeStyle = 'rgba(34, 197, 94, 0.5)';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(sx, sy);
+    ctx.stroke();
+
+    blips.forEach(b => {
+      const bAngle = Math.atan2(b.y - cy, b.x - cx);
+      let diff = angle - bAngle;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+
+      if (Math.abs(diff) < 0.08) {
+        b.opacity = 1.0;
+      } else {
+        b.opacity = Math.max(0.08, b.opacity - 0.005);
+      }
+
+      ctx.fillStyle = `rgba(34, 197, 94, ${b.opacity})`;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = `rgba(34, 197, 94, ${b.opacity * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 10 * (1.5 - b.opacity), 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = `rgba(34, 197, 94, ${b.opacity * 0.85})`;
+      ctx.font = '8.5px var(--font-sans)';
+      ctx.fillText(b.label, b.x + 8, b.y + 3);
+    });
+
+    angle = (angle + 0.015) % (Math.PI * 2);
+    requestAnimationFrame(draw);
+  }
+
+  draw();
 }
 
 
