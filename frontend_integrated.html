@@ -1483,7 +1483,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
           <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;flex:1;min-height:0">
             <div class="card" style="padding:16px;flex:1">
               <div class="card-header">
-                <h3 class="card-title">Monthly GCV trend (Kcal/kg)</h3>
+                <h3 class="card-title">Monthly Quality parameters trend</h3>
               </div>
               <div style="flex:1;position:relative;min-height:160px;margin-top:10px">
                 <canvas id="cqGCVChart"></canvas>
@@ -4453,19 +4453,66 @@ async function initCoalQuality() {
         type: 'line',
         data: {
           labels,
-          datasets: [{
-            label: 'GCV (kcal/kg)', data: vals, borderColor: '#10b981',
-            backgroundColor: 'rgba(16,185,129,0.06)', borderWidth: 2, tension: 0.38, fill: true,
-            pointRadius: 2.5, pointBackgroundColor: '#10b981'
-          }]
+          datasets: [
+            {
+              label: 'GCV (kcal/kg)',
+              data: vals,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16,185,129,0.04)',
+              borderWidth: 2,
+              tension: 0.38,
+              fill: true,
+              pointRadius: 2.5,
+              pointBackgroundColor: '#10b981',
+              yAxisID: 'y'
+            },
+            {
+              label: 'Moisture (%)',
+              data: months.map(m => m.avg_moisture || 12.0),
+              borderColor: '#3b82f6',
+              backgroundColor: 'transparent',
+              borderWidth: 1.5,
+              tension: 0.38,
+              pointRadius: 2,
+              pointBackgroundColor: '#3b82f6',
+              yAxisID: 'y1'
+            },
+            {
+              label: 'Ash (%)',
+              data: months.map(m => m.avg_ash || 35.0),
+              borderColor: '#f59e0b',
+              backgroundColor: 'transparent',
+              borderWidth: 1.5,
+              tension: 0.38,
+              pointRadius: 2,
+              pointBackgroundColor: '#f59e0b',
+              yAxisID: 'y1'
+            }
+          ]
         },
         options: {
-          responsive: true, maintainAspectRatio: false,
+          responsive: true,
+          maintainAspectRatio: false,
           scales: {
-            x: { grid: { color: 'rgba(0, 0, 0, 0.04)' } },
-            y: { grid: { color: 'rgba(0, 0, 0, 0.04)' }, ticks: { callback: v => v.toLocaleString() } }
+            x: { grid: { display: false } },
+            y: {
+              position: 'left',
+              grid: { color: 'rgba(0, 0, 0, 0.04)' },
+              ticks: { callback: v => v.toLocaleString() + ' kcal' }
+            },
+            y1: {
+              position: 'right',
+              grid: { display: false },
+              ticks: { callback: v => v + '%' }
+            }
           },
-          plugins: { legend: { display: false } }
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: { font: { size: 9.5 }, boxWidth: 12 }
+            }
+          }
         }
       });
     }
