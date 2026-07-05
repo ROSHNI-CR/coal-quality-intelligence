@@ -6024,19 +6024,45 @@ const FEATURE_EXPLANATIONS = {
     definition: "The average air temperature recorded 2 meters above ground level.",
     interpretation: "Higher ambient temperatures increase air moisture capacity, accelerating overall evaporation speeds.",
     why_matters: "Governs base thermodynamic drying rates across stockpiles."
+  },
+  dew_point_mean_c: {
+    title: "Mean Dew Point",
+    definition: "The atmospheric temperature threshold below which absolute water vapor condenses into surface liquid.",
+    interpretation: "A high dew point indicates dense atmospheric moisture loading. This suppresses natural stockpile evaporation even at high ambient temperatures, causing GCV value degradation.",
+    why_matters: "Crucial indicator of absolute air moisture content, helping operations identify muggy, high-humidity weather layers."
   }
+};
+
+const FEATURE_ALIASES = {
+  'solar': 'shortwave_radiation_sum_mj',
+  'solar_radiation': 'shortwave_radiation_sum_mj',
+  'rolling_solar_radiation': 'shortwave_radiation_sum_mj',
+  'temperature_range': 'temperature_2m_mean_c',
+  'temperature_min': 'temperature_2m_mean_c',
+  'temperature_max': 'temperature_2m_mean_c',
+  'dew_point': 'dew_point_mean_c',
+  'wind_speed': 'wind_speed_10m_max_kmh',
+  'wind_speed_mean': 'wind_speed_10m_max_kmh'
 };
 
 function showFeatureSHAPExplanation(featureName, score) {
   const clean = (s) => s.toLowerCase()
-    .replace(/_mean|_sum|_max|_10m|_2m|_kmh|_pct|_mm|_mj|_hpa|_m/g, '')
+    .replace(/_mean|_sum|_max|_10m|_2m|_kmh|_pct|_mm|_mj|_hpa|_m|_m2/g, '')
     .replace(/[^a-z0-9]/g, '');
   const cf = clean(featureName);
-  const mappingKey = Object.keys(FEATURE_EXPLANATIONS).find(k => {
-    const ck = clean(k);
-    return ck.includes(cf) || cf.includes(ck);
-  }) || featureName;
   
+  let matchedKey = null;
+  const aliasKey = Object.keys(FEATURE_ALIASES).find(ak => cf.includes(clean(ak)) || clean(ak).includes(cf));
+  if (aliasKey) {
+    matchedKey = FEATURE_ALIASES[aliasKey];
+  } else {
+    matchedKey = Object.keys(FEATURE_EXPLANATIONS).find(k => {
+      const ck = clean(k);
+      return ck.includes(cf) || cf.includes(ck);
+    });
+  }
+  
+  const mappingKey = matchedKey || featureName;
   const info = FEATURE_EXPLANATIONS[mappingKey] || {
     title: varName(featureName),
     definition: "Daily weather parameter registered by the mine's AWS station.",
