@@ -5100,6 +5100,22 @@ function plotWxExplorerChart() {
     subset = subset.slice(subset.length - _currentWxTimeRange);
   }
 
+  // Normalize row keys between historical timeseries and live weather forecasts
+  subset = subset.map(r => {
+    return {
+      date: r.date,
+      temperature_mean_c: typeof r.temperature_mean_c !== 'undefined' ? r.temperature_mean_c : (typeof r.temperature_2m_mean_c !== 'undefined' ? r.temperature_2m_mean_c : 25.0),
+      dew_point_mean_c: typeof r.dew_point_mean_c !== 'undefined' ? r.dew_point_mean_c : (typeof r.dew_point_2m_mean_c !== 'undefined' ? r.dew_point_2m_mean_c : 18.0),
+      solar_radiation_mj_m2: typeof r.solar_radiation_mj_m2 !== 'undefined' ? r.solar_radiation_mj_m2 : (typeof r.solar_radiation_sum_mj !== 'undefined' ? r.solar_radiation_sum_mj : 15.0),
+      rainfall_mm: typeof r.rainfall_mm !== 'undefined' ? r.rainfall_mm : (typeof r.precipitation_sum_mm !== 'undefined' ? r.precipitation_sum_mm : 0.0),
+      drying_potential: typeof r.drying_potential !== 'undefined' ? r.drying_potential : (typeof r.drying_potential_index !== 'undefined' ? r.drying_potential_index : 60.0),
+      wind_speed_mean_kmh: typeof r.wind_speed_mean_kmh !== 'undefined' ? r.wind_speed_mean_kmh : (typeof r.wind_speed_10m_max_kmh !== 'undefined' ? r.wind_speed_10m_max_kmh : 12.0),
+      wind_gust_max_kmh: r.wind_gust_max_kmh || 18.0,
+      surface_pressure_mean_hpa: r.surface_pressure_mean_hpa || 1008.0,
+      relative_humidity_mean_pct: r.relative_humidity_mean_pct || 65.0
+    };
+  });
+
   const labels = subset.map(r => r.date.slice(5));
   const profile = document.getElementById('wxChartProfile').value;
 
