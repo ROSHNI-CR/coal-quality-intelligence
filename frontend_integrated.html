@@ -1561,7 +1561,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
       </div><!-- /page-environmental-factors -->
 
       <!-- ═══════════ PAGE 7: AI PREDICTION ═══════════ -->
-      <div id="page-ai-prediction" class="page-content" style="height: auto;">
+      <div id="page-ai-prediction" class="page-content">
         
         <!-- Prediction Workflow Card -->
         <div class="card" style="padding:14px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
@@ -1906,27 +1906,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
             </div>
           </div>
 
-          <!-- Cross-Mine GCV Forecast Comparison Card -->
-          <div class="card col-10" style="padding:20px;margin-top:16px">
-            <div class="card-header" style="border-bottom:1px solid var(--border-color);padding-bottom:10px;margin-bottom:14px">
-              <h3 class="card-title">Cross-Mine GCV Forecast Comparison</h3>
-              <span class="card-subtitle">Plot and compare predicted 7-day GCV curves side-by-side</span>
-            </div>
-            
-            <div style="display:flex;gap:16px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
-              <div style="font-size:11px;color:var(--text-secondary)">Compare Mines:</div>
-              <div style="display:flex;gap:12px;flex-wrap:wrap" id="compareMinesCheckboxContainer">
-                <!-- Checkboxes populated dynamically -->
-              </div>
-              <button onclick="plotComparisonForecast()" class="dl-btn" style="height:28px;padding:0 12px;font-size:11px;margin-left:auto">
-                📈 Update Comparison Chart
-              </button>
-            </div>
-            
-            <div style="height:250px;position:relative">
-              <canvas id="xaiCompareChart"></canvas>
-            </div>
-          </div>
+
 
         </div>
       </div><!-- /page-ai-prediction -->
@@ -6378,132 +6358,6 @@ function speakText(btn) {
   utterance.onerror = () => { btn.textContent = '🔊'; };
 
   window.speechSynthesis.speak(utterance);
-}
-
-// 2. Cross-Mine GCV comparison chart setup
-window.xaiCompareChart = null;
-
-function initComparisonMines() {
-  const container = document.getElementById('compareMinesCheckboxContainer');
-  if (!container) return;
-
-  const compareMinesList = [
-    { code: 101, name: "Gevra OCP" },
-    { code: 102, name: "Kusmunda OCP" },
-    { code: 103, name: "Dipka OCP" },
-    { code: 104, name: "Rajmahal OCP" }
-  ];
-
-  container.innerHTML = compareMinesList.map(m => `
-    <label style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-primary);cursor:pointer">
-      <input type="checkbox" name="compareMines" value="${m.code}" checked style="cursor:pointer" onchange="plotComparisonForecast()">
-      <span>${m.name}</span>
-    </label>
-  `).join('');
-
-  plotComparisonForecast();
-}
-
-function plotComparisonForecast() {
-  const canvas = document.getElementById('xaiCompareChart');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-
-  const checkboxes = document.querySelectorAll('input[name="compareMines"]:checked');
-  const selectedCodes = Array.from(checkboxes).map(cb => Number(cb.value));
-
-  if (selectedCodes.length === 0) {
-    if (window.xaiCompareChart) window.xaiCompareChart.destroy();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = 'var(--text-disabled)';
-    ctx.font = '12px var(--font-sans)';
-    ctx.textAlign = 'center';
-    ctx.fillText('Select at least one mine to compare forecasts.', canvas.width / 2, canvas.height / 2);
-    return;
-  }
-
-  const dates = [];
-  const today = new Date();
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    dates.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-  }
-
-  const mineDetails = {
-    101: { name: "Gevra OCP", baseGcv: 4750, color: "#22c55e", variance: 40 },
-    102: { name: "Kusmunda OCP", baseGcv: 4320, color: "#3b82f6", variance: 60 },
-    103: { name: "Dipka OCP", baseGcv: 4520, color: "#f59e0b", variance: 50 },
-    104: { name: "Rajmahal OCP", baseGcv: 3850, color: "#dc2626", variance: 70 }
-  };
-
-  const datasets = selectedCodes.map(code => {
-    const m = mineDetails[code] || { name: `Mine ${code}`, baseGcv: 4200, color: "#64748b", variance: 50 };
-    const dataPoints = [];
-    for (let i = 0; i < 7; i++) {
-      const weatherDip = i === 3 ? -120 : i === 4 ? -80 : 0;
-      const randomNoise = Math.sin(i * 1.5) * m.variance;
-      dataPoints.push(Math.round(m.baseGcv + weatherDip + randomNoise));
-    }
-
-    return {
-      label: m.name,
-      data: dataPoints,
-      borderColor: m.color,
-      backgroundColor: 'transparent',
-      borderWidth: 2.2,
-      pointRadius: 4,
-      pointHoverRadius: 6,
-      tension: 0.2
-    };
-  });
-
-  if (window.xaiCompareChart) {
-    window.xaiCompareChart.destroy();
-  }
-
-  window.xaiCompareChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: dates,
-      datasets: datasets
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          labels: {
-            boxWidth: 12,
-            font: { size: 10, family: 'var(--font-sans)' },
-            color: 'var(--text-secondary)'
-          }
-        },
-        tooltip: {
-          mode: 'index',
-          intersect: false
-        }
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { font: { size: 9 }, color: 'var(--text-tertiary)' }
-        },
-        y: {
-          grid: { color: 'rgba(0, 0, 0, 0.05)' },
-          ticks: { font: { size: 9 }, color: 'var(--text-tertiary)' },
-          title: {
-            display: true,
-            text: 'GCV (kcal/kg)',
-            font: { size: 10, weight: 'bold' },
-            color: 'var(--text-secondary)'
-          }
-        }
-      }
-    }
-  });
 }
 
 // 3. Quality Grade Heatmap Overlay toggle logic
