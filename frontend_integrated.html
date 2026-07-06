@@ -3491,6 +3491,7 @@ function navigateTo(pageName) {
       if (_leafletMapGIS) _leafletMapGIS.invalidateSize();
     }, 150);
   } else if (pageName === 'PPA Penalty & ROI Calculator') {
+    if (typeof cacheAllMinesForCalc === 'function') cacheAllMinesForCalc();
     setTimeout(() => {
       const code = window.activeMineCode || '8506';
       const searchInput = document.getElementById('predMineSearch');
@@ -5969,11 +5970,52 @@ function selectCalcMine(code, name) {
   loadPpaPredictedGcv();
 }
 
+// Global cache for mines list to support fuzzy search on submit
+window.allMinesCachedList = [];
+
+async function cacheAllMinesForCalc() {
+  if (window.allMinesCachedList.length) return;
+  const res = await apiFetch(`/api/analytics/mines/gis-layer`);
+  if (res && res.mines) {
+    window.allMinesCachedList = res.mines;
+  }
+}
+
 async function loadPpaPredictedGcv() {
-  const code = document.getElementById('calcMineCode').value;
-  const date = document.getElementById('calcDate').value;
+  const searchInput = document.getElementById('calcMineSearch');
+  const searchText = searchInput ? searchInput.value.trim() : '';
+  let code = document.getElementById('calcMineCode').value;
   const statusEl = document.getElementById('calcPredictGcvStatus');
-  if (!code || !date) return;
+
+  // Try to resolve the mine code from the text input
+  if (/^\d+$/.test(searchText)) {
+    code = searchText;
+    document.getElementById('calcMineCode').value = code;
+  } else if (searchText.includes('(') && searchText.includes(')')) {
+    const matches = searchText.match(/\((\d+)\)/);
+    if (matches && matches[1]) {
+      code = matches[1];
+      document.getElementById('calcMineCode').value = code;
+    }
+  } else if (searchText && window.allMinesCachedList && window.allMinesCachedList.length) {
+    // Fuzzy match by name
+    const match = window.allMinesCachedList.find(m => 
+      m.name.toLowerCase().includes(searchText.toLowerCase())
+    );
+    if (match) {
+      code = match.mine_code.toString();
+      document.getElementById('calcMineCode').value = code;
+      // Auto complete the search box text
+      searchInput.value = `${match.name} (${code})`;
+    }
+  }
+
+  const date = document.getElementById('calcDate').value;
+  if (!code || !date) {
+    statusEl.textContent = "⚠ Please select a valid mine and date.";
+    statusEl.style.color = "var(--color-amber)";
+    return;
+  }
   
   statusEl.textContent = "Fetching active AI predictions...";
   statusEl.style.color = "var(--color-blue)";
@@ -5985,8 +6027,11 @@ async function loadPpaPredictedGcv() {
     statusEl.textContent = `✓ Successfully loaded prediction for ${date}.`;
     statusEl.style.color = "var(--color-green)";
   } else {
-    const randGcv = 4400 + Math.floor(Math.random() * 300);
-    document.getElementById('calcPredictGcv').value = randGcv;
+    // Fallback to stable pseudorandom forecast based on mine code
+    const seed = parseInt(code) || 8506;
+    const baseGcv = 4200 + ((seed * 17) % 500);
+    const randGcv = baseGcv + Math.floor(Math.random() * 80) - 40;
+    document.getElementById('calcPredictGcv').value = randGcv.toFixed(0);
     statusEl.textContent = `⚠ Prediction data unavailable for this date. Using simulated baseline.`;
     statusEl.style.color = "var(--color-amber)";
   }
