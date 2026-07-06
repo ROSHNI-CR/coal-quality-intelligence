@@ -486,7 +486,6 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
         <div class="nav-group-items">
           <div class="nav-item" data-page="Operational Alerts Log"><span class="nav-icon">◌</span> Alerts Log <span class="nav-badge" id="alertsBadge">—</span></div>
           <div class="nav-item" data-page="Reports & Exports Hub"><span class="nav-icon">▤</span> Reports Hub</div>
-          <div class="nav-item" data-page="PPA Penalty & ROI Calculator"><span class="nav-icon">💰</span> PPA Penalty &amp; ROI</div>
         </div>
       </div>
 
@@ -2279,170 +2278,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
         </div>
       </div><!-- /page-settings -->
 
-      <!-- ═══════════ PAGE 13: PPA GRADE PENALTY CALCULATOR ═══════════ -->
-      <div id="page-ppa-calculator" class="page-content">
-        <div class="grid grid-10" style="align-content:start">
-          
-          <!-- LEFT PANEL: Simulation parameters -->
-          <div class="card col-3" style="padding:18px;gap:14px;display:flex;flex-direction:column">
-            <div style="border-bottom:1px solid var(--border-color);padding-bottom:8px">
-              <h3 style="font-size:13px;font-weight:700;color:var(--text-primary)">PPA Pricing Inputs</h3>
-              <p style="font-size:10px;color:var(--text-tertiary)">Select target mine and contract variables.</p>
-            </div>
 
-            <!-- Autocomplete Mine Search -->
-            <div style="position:relative">
-              <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Target Mine</label>
-              <div class="search-wrapper" style="margin-top:4px;height:32px">
-                <input type="text" id="calcMineSearch" placeholder="Type mine name or code..." autocomplete="off" oninput="onCalcMineSearch(this.value)">
-                <input type="hidden" id="calcMineCode">
-              </div>
-              <div id="calcMineDropdown" class="search-dropdown" style="top:calc(100% + 4px);max-height:200px"></div>
-            </div>
-
-            <!-- Date Picker -->
-            <div>
-              <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Shipment Date</label>
-              <input id="calcDate" type="date" value="2025-09-01" onchange="loadPpaPredictedGcv()"
-                style="display:block;width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:7px 10px;border-radius:var(--radius-md);font-size:12px;margin-top:4px;outline:none">
-            </div>
-
-            <!-- Active GCV (Read-only or loaded automatically) -->
-            <div>
-              <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">AI Predicted GCV</label>
-              <div style="position:relative;margin-top:4px">
-                <input id="calcPredictGcv" type="number" value="4480" oninput="runPpaDedicatedCalculator()" style="width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 10px;font-size:11.5px;outline:none;font-weight:700">
-                <span style="position:absolute;right:8px;top:6px;font-size:9.5px;color:var(--text-tertiary)">kcal/kg</span>
-              </div>
-              <p style="font-size:9.5px;color:var(--text-tertiary);margin-top:4px" id="calcPredictGcvStatus">Using active model prediction baseline.</p>
-            </div>
-
-            <div style="border-top:1px solid var(--border-color);padding-top:10px;display:flex;flex-direction:column;gap:12px">
-              <div>
-                <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Contract Grade GCV</label>
-                <div style="position:relative;margin-top:4px">
-                  <input id="calcContractGcvDed" type="number" value="4600" oninput="runPpaDedicatedCalculator()" style="width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 10px;font-size:11.5px;outline:none">
-                  <span style="position:absolute;right:8px;top:6px;font-size:9.5px;color:var(--text-tertiary)">kcal/kg</span>
-                </div>
-              </div>
-
-              <div>
-                <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Dispatch Tonnage</label>
-                <div style="position:relative;margin-top:4px">
-                  <input id="calcTonnageDed" type="number" value="3500" oninput="runPpaDedicatedCalculator()" style="width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 10px;font-size:11.5px;outline:none">
-                  <span style="position:absolute;right:8px;top:6px;font-size:9.5px;color:var(--text-tertiary)">tons</span>
-                </div>
-              </div>
-
-              <div>
-                <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Base Coal Price</label>
-                <div style="position:relative;margin-top:4px">
-                  <input id="calcPriceDed" type="number" value="1400" oninput="runPpaDedicatedCalculator()" style="width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 10px;font-size:11.5px;outline:none">
-                  <span style="position:absolute;right:8px;top:6px;font-size:9.5px;color:var(--text-tertiary)">INR/ton</span>
-                </div>
-              </div>
-
-              <div>
-                <label style="font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;font-weight:700">Slippage Penalty Rate</label>
-                <div style="position:relative;margin-top:4px">
-                  <input id="calcPenaltyRateDed" type="number" value="1.50" step="0.10" oninput="runPpaDedicatedCalculator()" style="width:100%;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 10px;font-size:11.5px;outline:none">
-                  <span style="position:absolute;right:8px;top:6px;font-size:9.5px;color:var(--text-tertiary)">INR/kcal</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Explicit Action Button -->
-            <button class="dl-btn" style="width:100%;margin-top:14px;background:var(--color-blue);color:#ffffff;font-weight:700;height:36px;border:none;border-radius:var(--radius-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" onclick="loadPpaPredictedGcv()">
-              ⚡ Recalculate &amp; Fetch Forecast
-            </button>
-          </div>
-
-          <!-- RIGHT PANEL: Financial Quality Ledger -->
-          <div class="col-7" style="display:flex;flex-direction:column;gap:20px">
-            
-            <!-- Financial Summary KPI Row -->
-            <div class="grid grid-3" style="gap:16px">
-              <div class="card kpi-card" style="background:linear-gradient(135deg, rgba(244,244,245,0.9), rgba(255,255,255,0.95));border:1px solid rgba(0,0,0,0.1)">
-                <div class="kpi-icon-wrap risk" style="background:rgba(22,163,74,0.1);color:#16a34a">⚖</div>
-                <div class="kpi-details">
-                  <div class="kpi-label" style="color:#0f172a !important;font-weight:700">GCV Deviation</div>
-                  <div class="kpi-value" id="calcGcvDeviationDed" style="font-weight:800;color:#16a34a">—</div>
-                  <div class="kpi-delta neutral" id="calcGcvDeviationLabelDed" style="color:#475569;font-weight:500">Against Contract specifications</div>
-                </div>
-              </div>
-
-              <div class="card kpi-card" style="background:linear-gradient(135deg, rgba(239,68,68,0.04), rgba(255,255,255,0.95));border:1px solid rgba(239,68,68,0.2)">
-                <div class="kpi-icon-wrap risk" style="background:rgba(239,68,68,0.1);color:#dc2626">💸</div>
-                <div class="kpi-details">
-                  <div class="kpi-label" style="color:#0f172a !important;font-weight:700">Slippage Penalty Exposure</div>
-                  <div class="kpi-value" id="calcPenaltyValueDed" style="font-weight:800;color:#dc2626">—</div>
-                  <div class="kpi-delta neutral" style="color:#475569;font-weight:500">Estimated write-off risk</div>
-                </div>
-              </div>
-
-              <div class="card kpi-card" style="background:linear-gradient(135deg, rgba(22,163,74,0.04), rgba(255,255,255,0.95));border:1px solid rgba(22,163,74,0.2)">
-                <div class="kpi-icon-wrap gcv" style="background:rgba(22,163,74,0.1);color:#15803d">🛡</div>
-                <div class="kpi-details">
-                  <div class="kpi-label" style="color:#0f172a !important;font-weight:700">AI Mitigation ROI Savings</div>
-                  <div class="kpi-value" id="calcRoiValueDed" style="font-weight:800;color:#15803d">—</div>
-                  <div class="kpi-delta neutral" style="color:#475569;font-weight:500">Loss avoided through blending</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Ledger Details -->
-            <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:14px">
-              <div class="card-header" style="border-bottom:1px solid var(--border-color);padding-bottom:10px;margin-bottom:6px">
-                <h3 class="card-title">Commercial Dispatch Audit sheet</h3>
-                <span class="card-subtitle">Detailed breakdown of PPA pricing adjustments</span>
-              </div>
-
-              <div style="display:flex;flex-direction:column;gap:10px;font-size:12px;color:var(--text-secondary)">
-                <div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.04);padding-bottom:6px">
-                  <span>Gross Contract Dispatch Value</span>
-                  <span id="auditBasePrice" style="font-weight:600;color:var(--text-primary)">—</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.04);padding-bottom:6px">
-                  <span>Adjusted Dispatch Value (GCV Deficit Applied)</span>
-                  <span id="auditAdjustedPrice" style="font-weight:600;color:var(--color-red)">—</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.04);padding-bottom:6px">
-                  <span>Slippage Percentage of Base Price</span>
-                  <span id="auditSlippagePct" style="font-weight:600;color:var(--color-red)">—</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.04);padding-bottom:6px">
-                  <span>ROI Savings Saved by Blending Action</span>
-                  <span id="auditSavings" style="font-weight:600;color:var(--color-green)">—</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Mitigation Panel Toggle -->
-            <div class="card" style="padding:16px;background:rgba(22,163,74,0.12);border:1px solid rgba(22,163,74,0.4)">
-              <div style="display:flex;align-items:center;justify-content:space-between">
-                <div>
-                  <strong style="font-size:12.5px;color:#ffffff;display:block;margin-bottom:4px;text-shadow:0 1px 2px rgba(0,0,0,0.2)">Deploy Smart Blending &amp; Drying mitigation protocols</strong>
-                  <span style="font-size:11px;color:#e2e8f0">Restores stockpile GCV to contract base quality via target blending.</span>
-                </div>
-                <input type="checkbox" id="calcMitigationCheckedDed" onchange="runPpaDedicatedCalculator()" checked style="width:18px;height:18px;cursor:pointer">
-              </div>
-            </div>
-
-            <!-- Informational Panel: PPA Coal Grading Rules -->
-            <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:8px">
-              <strong style="font-size:12px;color:var(--color-blue)">PPA Coal Grading and Grade Slippage Rules:</strong>
-              <p style="font-size:10.5px;color:var(--text-secondary);line-height:1.45;margin:0">
-                Under the standard **Power Purchase Agreements (PPAs)** signed by Coal India Limited (CIL) subsidiaries, coal is priced based on **Declared GCV Bands** (e.g., G8, G9, G10).
-                If the loaded coal at the dispatch siding falls below the contracted band's lower limit, it triggers a **Grade Slippage Clause**.
-                This forces the mine to bill the shipment at the lower grade price, resulting in direct revenue losses.
-                By forecasting rainfall-driven moisture spikes 48 hours in advance, yard managers can blend high-moisture stockpiles with dry reserve grades to safeguard contract compliance.
-              </p>
-            </div>
-            
-          </div>
-
-        </div>
-      </div><!-- /page-ppa-calculator -->
 
     </div><!-- /page-container -->
   </div><!-- /workspace -->
@@ -3421,18 +3257,6 @@ function navigateToContext(pageName) {
       setTimeout(() => {
         runPredictionWorkspace();
       }, 120);
-    } else if (pageName === 'PPA Penalty & ROI Calculator') {
-      setTimeout(() => {
-        const searchInput = document.getElementById('predMineSearch');
-        const mineName = searchInput && searchInput.value ? searchInput.value.split(' (')[0] : 'PIPARIYA UG';
-        selectCalcMine(window.activeMineCode, mineName);
-      }, 120);
-    }
-  } else {
-    if (pageName === 'PPA Penalty & ROI Calculator') {
-      setTimeout(() => {
-        selectCalcMine('8506', 'PIPARIYA UG');
-      }, 120);
     }
   }
 }
@@ -3441,8 +3265,7 @@ function navigateToContext(pageName) {
 const PAGES = [
   'Executive Overview', 'Operational Risk Map', 'Mine Registry & Profiler', 'Environmental Monitoring', 
   'Quality Analytics & Trends', 'Environmental Insights', 'AI Quality Forecaster', 
-  'What-If Quality Simulator', 'Operational Alerts Log', 'Reports & Exports Hub', 'System Status',
-  'PPA Penalty & ROI Calculator'
+  'What-If Quality Simulator', 'Operational Alerts Log', 'Reports & Exports Hub', 'System Status'
 ];
 
 const PAGE_LINKS = {
@@ -3456,8 +3279,7 @@ const PAGE_LINKS = {
   'What-If Quality Simulator': { id: 'page-scenario-simulator', title: 'What-If Quality Simulator', subtitle: 'BQ: What happens if weather conditions shift? · OD: Simulate blending actions ahead of heavy rainfall to protect GCV.' },
   'Operational Alerts Log': { id: 'page-alerts', title: 'Operational Alerts Log', subtitle: 'BQ: What warnings need immediate attention? · OD: Dispatch corrective yard and washing runs for active alerts.' },
   'Reports & Exports Hub': { id: 'page-reports', title: 'Reports & Exports Hub', subtitle: 'BQ: What summary reports do I need to share? · OD: Export audit sheets and backtesting logs to regulatory bodies.' },
-  'System Status': { id: 'page-settings', title: 'System Status', subtitle: 'BQ: Are prediction models and databases healthy? · OD: Re-deploy underperforming ML models or restart synchronization servers.' },
-  'PPA Penalty & ROI Calculator': { id: 'page-ppa-calculator', title: 'PPA Grade Penalty & ROI Calculator', subtitle: 'BQ: What is the financial risk exposure of our dispatch quality? · OD: Optimize coal blending schedules to minimize grade slippage penalty write-offs.' }
+  'System Status': { id: 'page-settings', title: 'System Status', subtitle: 'BQ: Are prediction models and databases healthy? · OD: Re-deploy underperforming ML models or restart synchronization servers.' }
 };
 
 function navigateTo(pageName) {
@@ -3490,14 +3312,6 @@ function navigateTo(pageName) {
     setTimeout(() => {
       if (_leafletMapGIS) _leafletMapGIS.invalidateSize();
     }, 150);
-  } else if (pageName === 'PPA Penalty & ROI Calculator') {
-    if (typeof cacheAllMinesForCalc === 'function') cacheAllMinesForCalc();
-    setTimeout(() => {
-      const code = window.activeMineCode || '8506';
-      const searchInput = document.getElementById('predMineSearch');
-      const name = searchInput && searchInput.value ? searchInput.value.split(' (')[0] : 'PIPARIYA UG';
-      selectCalcMine(code, name);
-    }, 120);
   }
   
   initPage(link.id.replace('page-', ''));
