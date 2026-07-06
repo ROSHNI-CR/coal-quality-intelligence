@@ -2365,7 +2365,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
               <div class="card kpi-card" style="background:linear-gradient(135deg, rgba(244,244,245,0.9), rgba(255,255,255,0.95));border:1px solid rgba(0,0,0,0.1)">
                 <div class="kpi-icon-wrap risk" style="background:rgba(22,163,74,0.1);color:#16a34a">⚖</div>
                 <div class="kpi-details">
-                  <div class="kpi-label" style="color:#0f172a;font-weight:700">GCV Deviation</div>
+                  <div class="kpi-label" style="color:#0f172a !important;font-weight:700">GCV Deviation</div>
                   <div class="kpi-value" id="calcGcvDeviationDed" style="font-weight:800;color:#16a34a">—</div>
                   <div class="kpi-delta neutral" id="calcGcvDeviationLabelDed" style="color:#475569;font-weight:500">Against Contract specifications</div>
                 </div>
@@ -2374,7 +2374,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
               <div class="card kpi-card" style="background:linear-gradient(135deg, rgba(239,68,68,0.04), rgba(255,255,255,0.95));border:1px solid rgba(239,68,68,0.2)">
                 <div class="kpi-icon-wrap risk" style="background:rgba(239,68,68,0.1);color:#dc2626">💸</div>
                 <div class="kpi-details">
-                  <div class="kpi-label" style="color:#0f172a;font-weight:700">Slippage Penalty Exposure</div>
+                  <div class="kpi-label" style="color:#0f172a !important;font-weight:700">Slippage Penalty Exposure</div>
                   <div class="kpi-value" id="calcPenaltyValueDed" style="font-weight:800;color:#dc2626">—</div>
                   <div class="kpi-delta neutral" style="color:#475569;font-weight:500">Estimated write-off risk</div>
                 </div>
@@ -2383,7 +2383,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
               <div class="card kpi-card" style="background:linear-gradient(135deg, rgba(22,163,74,0.04), rgba(255,255,255,0.95));border:1px solid rgba(22,163,74,0.2)">
                 <div class="kpi-icon-wrap gcv" style="background:rgba(22,163,74,0.1);color:#15803d">🛡</div>
                 <div class="kpi-details">
-                  <div class="kpi-label" style="color:#0f172a;font-weight:700">AI Mitigation ROI Savings</div>
+                  <div class="kpi-label" style="color:#0f172a !important;font-weight:700">AI Mitigation ROI Savings</div>
                   <div class="kpi-value" id="calcRoiValueDed" style="font-weight:800;color:#15803d">—</div>
                   <div class="kpi-delta neutral" style="color:#475569;font-weight:500">Loss avoided through blending</div>
                 </div>
@@ -6016,34 +6016,70 @@ function runPpaDedicatedCalculator() {
     devLbl.textContent = 'GCV Deficit (Grade Slippage Risk)';
   }
 
-  const penaltyExposure = deviation >= 0 ? 0.0 : Math.abs(deviation) * penaltyRate * tonnage;
-  const penaltyValEl = document.getElementById('calcPenaltyValueDed');
+  // Calculate raw penalty
+  const rawPenalty = deviation >= 0 ? 0.0 : Math.abs(deviation) * penaltyRate * tonnage;
   
-  if (penaltyExposure === 0) {
+  // Active penalty paid becomes 0 if blending mitigation is deployed!
+  const penaltyExposure = isMitigated ? 0.0 : rawPenalty;
+  const penaltyValEl = document.getElementById('calcPenaltyValueDed');
+  const penaltyLbl = penaltyValEl.nextElementSibling;
+  
+  if (rawPenalty === 0) {
     penaltyValEl.textContent = 'INR 0';
-    penaltyValEl.style.color = 'var(--text-primary)';
+    penaltyValEl.style.color = '#0f172a';
+    if (penaltyLbl) penaltyLbl.textContent = 'Estimated write-off risk';
+  } else if (isMitigated) {
+    penaltyValEl.textContent = 'INR 0';
+    penaltyValEl.style.color = 'var(--color-green)';
+    if (penaltyLbl) penaltyLbl.textContent = `INR ${Number(rawPenalty.toFixed(0)).toLocaleString()} Mitigated`;
   } else {
-    penaltyValEl.textContent = `INR ${Number(penaltyExposure.toFixed(0)).toLocaleString()}`;
+    penaltyValEl.textContent = `INR ${Number(rawPenalty.toFixed(0)).toLocaleString()}`;
     penaltyValEl.style.color = 'var(--color-red)';
+    if (penaltyLbl) penaltyLbl.textContent = 'Active write-off risk';
   }
 
+  // ROI Savings card
   const roiValEl = document.getElementById('calcRoiValueDed');
-  if (isMitigated && penaltyExposure > 0) {
-    roiValEl.textContent = `INR ${Number(penaltyExposure.toFixed(0)).toLocaleString()}`;
+  if (isMitigated && rawPenalty > 0) {
+    roiValEl.textContent = `INR ${Number(rawPenalty.toFixed(0)).toLocaleString()}`;
     roiValEl.style.color = 'var(--color-green)';
   } else {
     roiValEl.textContent = 'INR 0';
-    roiValEl.style.color = 'var(--text-tertiary)';
+    roiValEl.style.color = '#475569';
   }
 
+  // Populate Ledger details
   const grossContractVal = tonnage * price;
   const netDispatchVal = grossContractVal - penaltyExposure;
-  const slippagePct = grossContractVal > 0 ? (penaltyExposure / grossContractVal * 100) : 0.0;
-  const savedVal = isMitigated ? penaltyExposure : 0.0;
+  const slippagePct = isMitigated ? 0.0 : (grossContractVal > 0 ? (rawPenalty / grossContractVal * 100) : 0.0);
+  const savedVal = isMitigated ? rawPenalty : 0.0;
 
   document.getElementById('auditBasePrice').textContent = `INR ${Number(grossContractVal.toFixed(0)).toLocaleString()}`;
-  document.getElementById('auditAdjustedPrice').textContent = `INR ${Number(netDispatchVal.toFixed(0)).toLocaleString()}`;
-  document.getElementById('auditSlippagePct').textContent = `${slippagePct.toFixed(2)} %`;
+  
+  const adjEl = document.getElementById('auditAdjustedPrice');
+  if (isMitigated && rawPenalty > 0) {
+    adjEl.textContent = `INR ${Number(netDispatchVal.toFixed(0)).toLocaleString()} (Restored)`;
+    adjEl.style.color = 'var(--color-green)';
+  } else if (rawPenalty > 0) {
+    adjEl.textContent = `INR ${Number(netDispatchVal.toFixed(0)).toLocaleString()}`;
+    adjEl.style.color = 'var(--color-red)';
+  } else {
+    adjEl.textContent = `INR ${Number(netDispatchVal.toFixed(0)).toLocaleString()}`;
+    adjEl.style.color = '#0f172a';
+  }
+
+  const pctEl = document.getElementById('auditSlippagePct');
+  if (isMitigated && rawPenalty > 0) {
+    pctEl.textContent = '0.00 % (Mitigated)';
+    pctEl.style.color = 'var(--color-green)';
+  } else if (rawPenalty > 0) {
+    pctEl.textContent = `${slippagePct.toFixed(2)} %`;
+    pctEl.style.color = 'var(--color-red)';
+  } else {
+    pctEl.textContent = '0.00 %';
+    pctEl.style.color = '#0f172a';
+  }
+
   document.getElementById('auditSavings').textContent = `INR ${Number(savedVal.toFixed(0)).toLocaleString()}`;
 }
 
@@ -6074,20 +6110,23 @@ function runPpaCalculator() {
     devLbl.textContent = 'GCV Deficit';
   }
 
-  const penaltyExposure = deviation >= 0 ? 0.0 : Math.abs(deviation) * penaltyRate * tonnage;
+  const rawPenalty = deviation >= 0 ? 0.0 : Math.abs(deviation) * penaltyRate * tonnage;
   const penaltyValEl = document.getElementById('calcPenaltyValue');
   
-  if (penaltyExposure === 0) {
+  if (rawPenalty === 0) {
     penaltyValEl.textContent = 'INR 0';
     penaltyValEl.style.color = 'var(--text-primary)';
+  } else if (isMitigated) {
+    penaltyValEl.textContent = 'INR 0';
+    penaltyValEl.style.color = 'var(--color-green)';
   } else {
-    penaltyValEl.textContent = `INR ${Number(penaltyExposure.toFixed(0)).toLocaleString()}`;
+    penaltyValEl.textContent = `INR ${Number(rawPenalty.toFixed(0)).toLocaleString()}`;
     penaltyValEl.style.color = 'var(--color-red)';
   }
 
   const roiValEl = document.getElementById('calcRoiValue');
-  if (isMitigated && penaltyExposure > 0) {
-    roiValEl.textContent = `INR ${Number(penaltyExposure.toFixed(0)).toLocaleString()}`;
+  if (isMitigated && rawPenalty > 0) {
+    roiValEl.textContent = `INR ${Number(rawPenalty.toFixed(0)).toLocaleString()}`;
     roiValEl.style.color = 'var(--color-green)';
   } else {
     roiValEl.textContent = 'INR 0';
